@@ -8,7 +8,7 @@ import Preloader from "./components/preloader";
 const IssMap = dynamic(() => import("./components/iss-map"), { ssr: false, loading: () => <div className="map-loading">Loading orbital map…</div> });
 
 type Position = { latitude: number; longitude: number };
-type IssData = Position & { timestamp: number; altitude: number; velocity: number; visibility?: string; source: string; orbit: Position[]; bearing: number };
+type IssData = Position & { timestamp: number; altitude: number; velocity: number; visibility?: string; source: string; orbit: Position[]; bearing: number; stale?: boolean };
 
 function formatTime(timestamp: number) {
   if (!timestamp) return "—";
@@ -23,9 +23,17 @@ export default function Home() {
 
   useEffect(() => {
     let active = true;
+    let loadingRequest = false;
+    let retryTimer: number | undefined;
+
     const load = async () => {
+      if (!active || loadingRequest) return;
+      loadingRequest = true;
       try {
-        const response = await fetch("/api/iss", { cache: "no-store" });
+        const controller = new AbortController();
+        const timeout = window.setTimeout(() => controller.abort(), 7_000);
+        const response = await fetch("/api/iss", { cache: "no-store", signal: controller.signal });
+        window.clearTimeout(timeout);
         const next = await response.json();
         if (!response.ok) throw new Error(next.error || "Could not load ISS data");
         if (!active) return;
@@ -33,14 +41,25 @@ export default function Home() {
         setTrail((current) => [...current.slice(-39), { latitude: next.latitude, longitude: next.longitude }]);
         setError("");
       } catch (err) {
-        if (active) setError(err instanceof Error ? err.message : "Something went wrong");
+        if (active && !data) setError(err instanceof Error ? err.message : "Something went wrong");
       } finally {
+        loadingRequest = false;
         if (active) setLoading(false);
       }
     };
-    load();
-    const interval = window.setInterval(load, 5000);
-    return () => { active = false; window.clearInterval(interval); };
+
+    const start = async () => {
+      await load();
+      if (!active) return;
+      // Keep the live tracker responsive without creating overlapping requests.
+      retryTimer = window.setInterval(load, 5_000);
+    };
+
+    start();
+    return () => {
+      active = false;
+      if (retryTimer) window.clearInterval(retryTimer);
+    };
   }, []);
 
   const hemisphere = useMemo(() => {
