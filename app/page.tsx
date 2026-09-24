@@ -6,7 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 const IssMap = dynamic(() => import("./components/iss-map"), { ssr: false, loading: () => <div className="map-loading">Loading orbital map…</div> });
 
 type Position = { latitude: number; longitude: number };
-type IssData = Position & { timestamp: number; altitude: number; velocity: number; visibility?: string; source: string };
+type IssData = Position & { timestamp: number; altitude: number; velocity: number; visibility?: string; source: string; orbit: Position[]; bearing: number };
 
 function formatTime(timestamp: number) {
   if (!timestamp) return "—";
@@ -62,16 +62,16 @@ export default function Home() {
       </section>
 
       <section className="map-card">
-        {data ? <IssMap position={data} trail={trail} altitude={data.altitude} velocity={data.velocity} /> : <div className="map-loading">Establishing orbital lock…</div>}
-        <div className="map-overlay"><span>EARTH</span><span>{data?.visibility ? data.visibility.toUpperCase() : "LOW EARTH ORBIT"}</span></div>
-        <div className="orbit-legend"><span className="legend-line" /> PREDICTED GROUND TRACK</div>
+        {data ? <IssMap position={data} trail={trail} orbit={data.orbit} bearing={data.bearing} /> : <div className="map-loading">Establishing orbital lock…</div>}
+        <div className="map-overlay"><span>EARTH / LIVE ORBIT</span><span>{data?.visibility ? data.visibility.toUpperCase() : "LOW EARTH ORBIT"}</span></div>
+        <div className="orbit-legend"><span className="legend-line" /> LIVE ORBITAL GROUND TRACK <i>·</i> SGP4 / TLE</div>
       </section>
 
       <section className="stats">
         <article><span>POSITION</span><strong>{hemisphere}</strong><small>Latitude / longitude</small></article>
         <article><span>ALTITUDE</span><strong>{data ? `${data.altitude.toFixed(1)} km` : "—"}</strong><small>Above mean sea level</small></article>
         <article><span>VELOCITY</span><strong>{data ? `${Math.round(data.velocity).toLocaleString()} km/h` : "—"}</strong><small>Orbital speed</small></article>
-        <article><span>LAST SIGNAL</span><strong>{data ? formatTime(data.timestamp) : "—"}</strong><small>Local time</small></article>
+        <article><span>LAST SIGNAL</span><strong>{data ? formatTime(data.timestamp) : "—"}</strong><small>Live telemetry</small></article>
       </section>
 
       <section className="next-section">
@@ -79,7 +79,7 @@ export default function Home() {
         <div className="roadmap"><div className="roadmap-item active"><b>01</b><span>ISS Tracker</span><small>Live orbital telemetry</small></div><div className="roadmap-item"><b>02</b><span>Solar System</span><small>Explore our neighborhood</small></div><div className="roadmap-item"><b>03</b><span>Star Atlas</span><small>Map the night sky</small></div></div>
       </section>
 
-      <footer><span>SPACE / 2026</span><span>DATA: WHERE THE ISS AT?</span></footer>
+      <footer><span>SPACE / 2026</span><span>DATA: WHERE THE ISS AT? · ORBIT: CELESTRAK TLE</span></footer>
     </main>
   );
 }
