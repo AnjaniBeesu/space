@@ -40,9 +40,6 @@ function Terminator({ now }: { now: number }) {
   return <Polyline positions={points} pathOptions={{ color: "#f8e7a4", weight: 1.5, opacity: 0.75, dashArray: "5 5" }} />;
 }
 
-// Unwrap longitude so one orbital revolution is rendered as one continuous
-// curve. It is allowed to extend beyond +/-180 internally; the single-world
-// map clips it cleanly at the edges instead of drawing a false line across Earth.
 function unwrapOrbit(points: OrbitPoint[], anchorLongitude: number): LatLng[] {
   if (!points.length) return [];
   const result: LatLng[] = [[points[0].latitude, points[0].longitude]];
@@ -53,19 +50,27 @@ function unwrapOrbit(points: OrbitPoint[], anchorLongitude: number): LatLng[] {
     while (longitude - previous < -180) longitude += 360;
     result.push([points[i].latitude, longitude]);
   }
-
-  let closestIndex = 0;
-  let closestDistance = Infinity;
+  let closestIndex = 0, closestDistance = Infinity;
   result.forEach((point, index) => {
     const distance = Math.abs(point[1] - anchorLongitude);
-    if (distance < closestDistance) {
-      closestDistance = distance;
-      closestIndex = index;
-    }
+    if (distance < closestDistance) { closestDistance = distance; closestIndex = index; }
   });
-
   const shift = Math.round((anchorLongitude - result[closestIndex][1]) / 360) * 360;
   return result.map(([latitude, longitude]) => [latitude, longitude + shift] as LatLng);
+}
+
+function trajectoryBearing(from: LatLng, to: LatLng) {
+  const lat = from[0] * Math.PI / 180;
+  return Math.atan2((to[1] - from[1]) * Math.cos(lat), to[0] - from[0]) * 180 / Math.PI;
+}
+
+function createTrajectoryArrow(bearing: number) {
+  return L.divIcon({
+    className: "trajectory-arrow-marker",
+    html: `<span class="trajectory-arrow" style="--arrow-bearing:${bearing}deg"></span>`,
+    iconSize: [18, 18],
+    iconAnchor: [9, 9],
+  });
 }
 
 function createIssIcon(bearing: number) {
@@ -82,7 +87,18 @@ export default function IssMap({ position, trail, orbit, bearing }: { position: 
   useEffect(() => { const timer = window.setInterval(() => setNow(Date.now()), 60_000); return () => window.clearInterval(timer); }, []);
 
   const trajectory = useMemo(() => unwrapOrbit(orbit, position.longitude), [orbit, position.longitude]);
+  const trajectoryArrows = useMemo(() => {
+    const arrows: { point: LatLng; bearing: number }[] = [];
+    const spacing = Math.max(1, Math.floor(trajectory.length / 10));
+    for (let i = spacing; i < trajectory.length - 1; i += spacing) {
+      const point = trajectory[i];
+      if (point[1] < -180 || point[1] > 180) continue;
+      arrows.push({ point, bearing: trajectoryBearing(trajectory[i - 1], trajectory[i + 1]) });
+    }
+    return arrows;
+  }, [trajectory]);
   const issIcon = useMemo(() => createIssIcon(bearing), [bearing]);
+  const arrowIcons = useMemo(() => trajectoryArrows.map((arrow) => createTrajectoryArrow(arrow.bearing)), [trajectoryArrows]);
 
   return (
     <MapContainer center={[position.latitude, position.longitude]} zoom={2.5} minZoom={2.5} maxZoom={7} worldCopyJump={false} maxBounds={[[-90, -180], [90, 180]]} maxBoundsViscosity={1} scrollWheelZoom className="iss-map">
@@ -91,10 +107,11 @@ export default function IssMap({ position, trail, orbit, bearing }: { position: 
       <Terminator now={now} />
 
       <Polyline positions={trajectory} pathOptions={{ color: "#ffffff", weight: 2.5, opacity: 0.95, dashArray: "10 8", lineCap: "round", lineJoin: "round" }} />
+      {trajectoryArrows.map((arrow, index) => <Marker key={`trajectory-arrow-${index}`} position={arrow.point} icon={arrowIcons[index]} interactive={false} zIndexOffset={300} />)}
       {trail.length > 1 && <Polyline positions={trail.map((p) => [p.latitude, p.longitude] as LatLng)} pathOptions={{ color: "#ff6bd6", weight: 2, opacity: 0.3, lineCap: "round" }} />}
 
       <Marker position={[position.latitude, position.longitude]} icon={issIcon} zIndexOffset={1000} />
-      <CircleMarker center={[position.latitude, position.longitude]} radius={25} pathOptions={{ color: "#ff6bd6", weight: 1, fillOpacity: 0, opacity: 0.3 }} />
+      <CircleMarker center={[position.latitude, position.longitude]} radius={25} pathOptions={{ color: "#ff3030", weight: 1.5, fillOpacity: 0, opacity: 0.72 }} />
       <Recenter position={position} />
     </MapContainer>
   );
