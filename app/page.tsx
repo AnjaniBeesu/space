@@ -60,11 +60,9 @@ export default function Home() {
 
       <section className="hero">
         <div>
-          <p className="eyebrow">ORBITAL TELEMETRY / EARTH</p>
-          <h1>Where is the <em>ISS</em> right now?</h1>
-          <p className="lede">A live window into humanity&apos;s home in low Earth orbit.</p>
+          <h1>WHERE IS THE <em>ISS</em> RIGHT NOW?</h1>
         </div>
-        <div className="orbit-badge">◉  LIVE <span>·</span> updates every 5s</div>
+        <div className="orbit-badge"><span className="live-dot">◉</span> LIVE <span>·</span> updates every 5s</div>
       </section>
 
       <section className="map-card">
@@ -78,11 +76,6 @@ export default function Home() {
         <article><span>ALTITUDE</span><strong>{data ? `${data.altitude.toFixed(1)} km` : "—"}</strong><small>Above mean sea level</small></article>
         <article><span>VELOCITY</span><strong>{data ? `${Math.round(data.velocity).toLocaleString()} km/h` : "—"}</strong><small>Orbital speed</small></article>
         <article><span>LAST SIGNAL</span><strong>{data ? formatTime(data.timestamp) : "—"}</strong><small>Live telemetry</small></article>
-      </section>
-
-      <section className="next-section">
-        <div><p className="eyebrow">THE ROADMAP</p><h2>From one station to the <em>universe.</em></h2></div>
-        <div className="roadmap"><div className="roadmap-item active"><b>01</b><span>ISS Tracker</span><small>Live orbital telemetry</small></div><div className="roadmap-item"><b>02</b><span>Solar System</span><small>Explore our neighborhood</small></div><div className="roadmap-item"><b>03</b><span>Star Atlas</span><small>Map the night sky</small></div></div>
       </section>
 
       <footer><span>SPACE / 2026</span><span>DATA: WHERE THE ISS AT? · ORBIT: CELESTRAK TLE</span></footer>
