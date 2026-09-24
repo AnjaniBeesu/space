@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import Preloader from "./components/preloader";
 
@@ -54,13 +55,13 @@ export default function Home() {
   return (
     <main className="shell">
       <header className="topbar">
-        <div className="brand">
+        <Link href="/" className="brand">
           <div className="brand-logo" aria-label="ISS spacecraft logo"><img src="/logo.svg" alt="ISS spacecraft" /></div>
           <span className="brand-title">LIVE ISS TRACKER</span>
-        </div>
+        </Link>
         <nav className="site-nav" aria-label="Main navigation">
-          <button type="button">HOME</button>
-          <button type="button">MORE ABOUT ISS</button>
+          <Link href="/">HOME</Link>
+          <Link href="/more-about-iss">MORE ABOUT ISS</Link>
         </nav>
       </header>
 
