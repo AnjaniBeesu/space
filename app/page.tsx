@@ -81,7 +81,7 @@ export default function Home() {
       <footer>
         <span>© ISS TRACKER</span>
         <span className="footer-contact">
-          FOR MORE INFORMATION, QUERIES OR TO POINT OUT MISTAKES CONTACT: 
+          FOR INFORMATION OR INQUIRIES: 
           <a href="mailto:anjanibeesu@gmail.com">GMAIL</a>
           <a href="https://in.linkedin.com/in/anjanibeesu" target="_blank" rel="noreferrer">LINKEDIN</a>
           <a href="https://github.com/AnjaniBeesu" target="_blank" rel="noreferrer">GITHUB</a>
