@@ -1,30 +1,29 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap');
 
-:root { --bg:#07070a; --panel:#0d0e13; --line:#22232b; --text:#f5f3f7; --muted:#92909b; --pink:#ff6bd6; }
+:root { --bg:#000; --panel:#080808; --line:#262626; --text:#fff; --muted:#8b8b8b; --pink:#ff6bd6; }
 * { box-sizing:border-box; }
-html { background:var(--bg); }
-body { margin:0; background:radial-gradient(circle at 70% 0%, #17101a 0, transparent 32%), var(--bg); color:var(--text); font-family:'Space Grotesk',sans-serif; }
+html { background:#000; }
+body { margin:0; background:#000; color:var(--text); font-family:'Space Grotesk',sans-serif; }
 a { color:inherit; }
 button { font:inherit; }
 .shell { max-width:1380px; margin:auto; padding:0 36px; }
 .topbar { height:82px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--line); }
 .brand { display:flex; gap:13px; align-items:center; font-weight:700; letter-spacing:.16em; font-size:14px; }
-.brand-logo { width:34px; height:34px; display:grid; place-items:center; overflow:hidden; border:1px solid #33343c; background:#111217; border-radius:50%; flex:none; }
+.brand-logo { width:52px; height:34px; display:grid; place-items:center; overflow:hidden; border:1px solid #303030; background:#050505; border-radius:3px; flex:none; }
 .brand-logo img { width:100%; height:100%; object-fit:cover; display:block; }
 .brand-title { color:#fff; white-space:nowrap; }
 .site-nav { display:flex; align-items:center; gap:34px; }
-.site-nav button { appearance:none; border:0; background:none; color:#bdbbc2; padding:8px 0; cursor:default; font:500 11px 'DM Mono',monospace; letter-spacing:.11em; transition:color .2s ease; }
-.site-nav button:last-child { color:#fff; }
-.site-nav button:hover { color:#fff; }
+.site-nav button { appearance:none; border:0; background:none; color:#fff; padding:8px 0; cursor:default; font:500 11px 'DM Mono',monospace; letter-spacing:.11em; transition:opacity .2s ease; }
+.site-nav button:hover { opacity:.65; }
 .status,.eyebrow,.stats span,footer,.orbit-badge { font-family:'DM Mono',monospace; letter-spacing:.12em; font-size:10px; }
 .status { color:var(--muted); display:flex; align-items:center; gap:8px; }
-.status-dot { width:7px;height:7px;border-radius:50%;background:#74f2ad; box-shadow:0 0 12px #74f2ad; }.status-dot.offline{background:#ff6b7e;box-shadow:none}
+.status-dot { width:7px;height:7px;border-radius:50%;background:#fff; box-shadow:0 0 12px #fff; }.status-dot.offline{background:#555;box-shadow:none}
 .hero { padding:76px 0 38px; display:flex; justify-content:space-between; gap:30px; align-items:flex-end; }
 .eyebrow { color:#fff; margin:0 0 14px; }
 h1 { font-size:clamp(42px,6vw,82px); line-height:.96; letter-spacing:-.055em; max-width:850px; margin:0; font-weight:600; }
 h1 em,h2 em { color:#fff; font-style:normal; }
 .lede { color:var(--muted); font-size:17px; margin:22px 0 0; }
-.orbit-badge { border:1px solid var(--line); border-radius:999px; padding:10px 14px; white-space:nowrap; color:#d2d0d6; }.orbit-badge span{color:#555}
+.orbit-badge { border:1px solid var(--line); border-radius:999px; padding:10px 14px; white-space:nowrap; color:#fff; }.orbit-badge span{color:#666}
 .map-card { height:620px; position:relative; overflow:hidden; border:1px solid var(--line); border-radius:4px; background:#090b10; }
 .iss-map { width:100%; height:100%; background:#090b10; }.leaflet-container { background:#090b10; font-family:inherit; }.leaflet-tile { filter:brightness(.62) saturate(.8) contrast(1.08); }
 .map-overlay { position:absolute; inset:18px; z-index:500; pointer-events:none; display:flex; justify-content:space-between; font:10px 'DM Mono',monospace; letter-spacing:.12em; color:#aaa7b1; }.map-loading { height:100%; display:grid; place-items:center; color:var(--muted); font:12px 'DM Mono',monospace; letter-spacing:.12em; }
@@ -32,7 +31,7 @@ h1 em,h2 em { color:#fff; font-style:normal; }
 .iss-spacecraft-marker { background:transparent !important; border:0 !important; overflow:visible !important; }.iss-spacecraft { width:74px;height:74px;position:relative;display:block;filter:drop-shadow(0 0 8px rgba(255,107,214,.75));transform:rotate(var(--bearing));transform-origin:50% 50%; }.iss-body { position:absolute;left:32px;top:32px;width:10px;height:10px;border-radius:50%;background:#f7f4ff;border:2px solid #20212a;z-index:5; }.iss-panel { position:absolute;top:33px;width:23px;height:8px;background:linear-gradient(90deg,#263b61,#9cb4d7);border:1px solid #d6e3f5;box-shadow:0 0 4px rgba(160,196,255,.5);z-index:4; }.iss-panel.left{left:5px;transform:skewY(-8deg)}.iss-panel.right{right:5px;transform:skewY(8deg)}.iss-glow { position:absolute;left:25px;top:25px;width:24px;height:24px;border:1px solid rgba(255,48,48,.78);border-radius:50%;animation:issPulse 2s ease-out infinite;z-index:1; }.iss-direction { position:absolute;left:34px;top:8px;width:6px;height:15px;background:var(--pink);clip-path:polygon(50% 0,100% 100%,50% 72%,0 100%);z-index:6;filter:drop-shadow(0 0 4px var(--pink)); }.iss-ring { position:absolute;left:50%;top:50%;border:1px solid rgba(255,107,214,.8);border-radius:50%;transform:translate(-50%,-50%);pointer-events:none; }.ring-one{width:38px;height:38px;opacity:.72}.ring-two{width:52px;height:52px;opacity:.48}.ring-three{width:66px;height:66px;opacity:.26}.iss-label { position:absolute;left:50%;top:73px;transform:translateX(-50%) rotate(calc(var(--bearing) * -1));font:7px 'DM Mono',monospace;letter-spacing:.08em;color:#fff;opacity:.85;white-space:nowrap; }.iss-spacecraft:after { content:''; }
 .trajectory-arrow-marker { background:transparent !important; border:0 !important; }.trajectory-arrow { display:block;width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:12px solid #fff;filter:drop-shadow(0 0 3px rgba(255,255,255,.75));transform:rotate(var(--arrow-bearing));transform-origin:50% 50%;opacity:.9; }
 @keyframes issPulse { 0%{transform:scale(.75);opacity:.8} 100%{transform:scale(1.5);opacity:0} }
-.stats { display:grid; grid-template-columns:repeat(4,1fr); border:1px solid var(--line); border-top:0; }.stats article { padding:23px; min-height:120px; border-right:1px solid var(--line); }.stats article:last-child{border-right:0}.stats span{display:block;color:var(--muted);margin-bottom:12px}.stats strong{display:block;font-size:19px;font-weight:500}.stats small{display:block;color:#676570;margin-top:7px}
-.next-section { padding:110px 0 100px; display:grid; grid-template-columns:1fr 1.3fr; gap:80px; border-bottom:1px solid var(--line); }h2{font-size:42px;line-height:1.05;letter-spacing:-.04em;margin:0;max-width:500px}.roadmap{border-left:1px solid #34343d}.roadmap-item{padding:3px 0 28px 28px;position:relative;display:grid;grid-template-columns:48px 1fr;column-gap:12px}.roadmap-item:before{content:'';position:absolute;left:-4px;top:7px;width:7px;height:7px;border-radius:50%;background:#35353d}.roadmap-item.active:before{background:#fff;box-shadow:0 0 14px rgba(255,255,255,.55)}.roadmap-item b{font:10px 'DM Mono',monospace;color:#65636d}.roadmap-item span{font-size:20px}.roadmap-item small{grid-column:2;color:#6e6c75;margin-top:5px}
-footer{display:flex;justify-content:space-between;padding:25px 0;color:#5f5d66}
+.stats { display:grid; grid-template-columns:repeat(4,1fr); border:1px solid var(--line); border-top:0; }.stats article { padding:23px; min-height:120px; border-right:1px solid var(--line); }.stats article:last-child{border-right:0}.stats span{display:block;color:var(--muted);margin-bottom:12px}.stats strong{display:block;font-size:19px;font-weight:500}.stats small{display:block;color:#676767;margin-top:7px}
+.next-section { padding:110px 0 100px; display:grid; grid-template-columns:1fr 1.3fr; gap:80px; border-bottom:1px solid var(--line); }h2{font-size:42px;line-height:1.05;letter-spacing:-.04em;margin:0;max-width:500px}.roadmap{border-left:1px solid #343434}.roadmap-item{padding:3px 0 28px 28px;position:relative;display:grid;grid-template-columns:48px 1fr;column-gap:12px}.roadmap-item:before{content:'';position:absolute;left:-4px;top:7px;width:7px;height:7px;border-radius:50%;background:#353535}.roadmap-item.active:before{background:#fff;box-shadow:0 0 14px rgba(255,255,255,.55)}.roadmap-item b{font:10px 'DM Mono',monospace;color:#656565}.roadmap-item span{font-size:20px}.roadmap-item small{grid-column:2;color:#6e6e6e;margin-top:5px}
+footer{display:flex;justify-content:space-between;padding:25px 0;color:#5f5f5f}
 @media(max-width:800px){.shell{padding:0 18px}.topbar{height:72px}.brand{font-size:11px}.site-nav{gap:18px}.site-nav button{font-size:9px}.hero{padding-top:55px;display:block}.orbit-badge{display:inline-block;margin-top:28px}.map-card{height:480px}.stats{grid-template-columns:1fr 1fr}.stats article:nth-child(2){border-right:0}.stats article:nth-child(-n+2){border-bottom:1px solid var(--line)}.next-section{grid-template-columns:1fr;gap:45px;padding:75px 0}h2{font-size:35px}}
