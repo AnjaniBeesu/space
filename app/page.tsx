@@ -49,12 +49,12 @@ export default function Home() {
     <main className="shell">
       <header className="topbar">
         <div className="brand">
-          <div className="brand-logo" aria-label="Space logo"><img src="/logo.png" alt="" /></div>
+          <div className="brand-logo" aria-label="ISS spacecraft logo"><img src="/logo.svg" alt="ISS spacecraft" /></div>
           <span className="brand-title">LIVE ISS TRACKER</span>
         </div>
         <nav className="site-nav" aria-label="Main navigation">
-          <button type="button">MORE ABOUT ISS</button>
           <button type="button">HOME</button>
+          <button type="button">MORE ABOUT ISS</button>
         </nav>
       </header>
 
