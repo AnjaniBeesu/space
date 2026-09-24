@@ -40,23 +40,38 @@ function Terminator({ now }: { now: number }) {
   return <Polyline positions={points} pathOptions={{ color: "#f8e7a4", weight: 1.5, opacity: 0.75, dashArray: "5 5" }} />;
 }
 
-function unwrapOrbit(points: OrbitPoint[], anchorLongitude: number): LatLng[] {
+function buildVisibleTrajectory(points: OrbitPoint[], anchorLongitude: number): LatLng[] {
   if (!points.length) return [];
-  const result: LatLng[] = [[points[0].latitude, points[0].longitude]];
+  const raw: LatLng[] = [[points[0].latitude, points[0].longitude]];
   for (let i = 1; i < points.length; i++) {
-    const previous = result[i - 1][1];
+    const previous = raw[i - 1][1];
     let longitude = points[i].longitude;
     while (longitude - previous > 180) longitude -= 360;
     while (longitude - previous < -180) longitude += 360;
-    result.push([points[i].latitude, longitude]);
+    raw.push([points[i].latitude, longitude]);
   }
-  let closestIndex = 0, closestDistance = Infinity;
-  result.forEach((point, index) => {
+
+  let anchorIndex = 0;
+  let anchorDistance = Infinity;
+  raw.forEach((point, index) => {
     const distance = Math.abs(point[1] - anchorLongitude);
-    if (distance < closestDistance) { closestDistance = distance; closestIndex = index; }
+    if (distance < anchorDistance) { anchorDistance = distance; anchorIndex = index; }
   });
-  const shift = Math.round((anchorLongitude - result[closestIndex][1]) / 360) * 360;
-  return result.map(([latitude, longitude]) => [latitude, longitude + shift] as LatLng);
+
+  const centered = raw.map(([latitude, longitude]) => [latitude, longitude + Math.round((anchorLongitude - raw[anchorIndex][1]) / 360) * 360] as LatLng);
+  const min = Math.min(...centered.map(([, longitude]) => longitude));
+  const max = Math.max(...centered.map(([, longitude]) => longitude));
+  const span = max - min;
+
+  if (span <= 360) {
+    const lowShift = -180 - min;
+    const highShift = 180 - max;
+    const preferredShift = Math.round(-((min + max) / 2) / 360) * 360;
+    const shift = Math.max(lowShift, Math.min(highShift, preferredShift));
+    return centered.map(([latitude, longitude]) => [latitude, longitude + shift] as LatLng);
+  }
+
+  return centered.filter(([, longitude]) => longitude >= -180 && longitude <= 180);
 }
 
 function trajectoryBearing(from: LatLng, to: LatLng) {
@@ -65,20 +80,14 @@ function trajectoryBearing(from: LatLng, to: LatLng) {
 }
 
 function createTrajectoryArrow(bearing: number) {
-  return L.divIcon({
-    className: "trajectory-arrow-marker",
-    html: `<span class="trajectory-arrow" style="--arrow-bearing:${bearing}deg"></span>`,
-    iconSize: [18, 18],
-    iconAnchor: [9, 9],
-  });
+  return L.divIcon({ className: "trajectory-arrow-marker", html: `<span class="trajectory-arrow" style="--arrow-bearing:${bearing}deg"></span>`, iconSize: [18, 18], iconAnchor: [9, 9] });
 }
 
 function createIssIcon(bearing: number) {
   return L.divIcon({
     className: "iss-spacecraft-marker",
     html: `<div class="iss-spacecraft" style="--bearing:${bearing}deg"><span class="iss-ring ring-one"></span><span class="iss-ring ring-two"></span><span class="iss-ring ring-three"></span><span class="iss-direction"></span><span class="iss-body"></span><span class="iss-panel left"></span><span class="iss-panel right"></span><span class="iss-glow"></span><span class="iss-label">ISS</span></div>`,
-    iconSize: [74, 74],
-    iconAnchor: [37, 37],
+    iconSize: [74, 74], iconAnchor: [37, 37],
   });
 }
 
@@ -86,15 +95,11 @@ export default function IssMap({ position, trail, orbit, bearing }: { position: 
   const [now, setNow] = useState(Date.now());
   useEffect(() => { const timer = window.setInterval(() => setNow(Date.now()), 60_000); return () => window.clearInterval(timer); }, []);
 
-  const trajectory = useMemo(() => unwrapOrbit(orbit, position.longitude), [orbit, position.longitude]);
+  const trajectory = useMemo(() => buildVisibleTrajectory(orbit, position.longitude), [orbit, position.longitude]);
   const trajectoryArrows = useMemo(() => {
     const arrows: { point: LatLng; bearing: number }[] = [];
     const spacing = Math.max(1, Math.floor(trajectory.length / 10));
-    for (let i = spacing; i < trajectory.length - 1; i += spacing) {
-      const point = trajectory[i];
-      if (point[1] < -180 || point[1] > 180) continue;
-      arrows.push({ point, bearing: trajectoryBearing(trajectory[i - 1], trajectory[i + 1]) });
-    }
+    for (let i = spacing; i < trajectory.length - 1; i += spacing) arrows.push({ point: trajectory[i], bearing: trajectoryBearing(trajectory[i - 1], trajectory[i + 1]) });
     return arrows;
   }, [trajectory]);
   const issIcon = useMemo(() => createIssIcon(bearing), [bearing]);
@@ -105,11 +110,9 @@ export default function IssMap({ position, trail, orbit, bearing }: { position: 
       <TileLayer attribution='&copy; <a href="https://www.esri.com/">Esri</a> contributors' url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}" maxZoom={19} noWrap />
       <TileLayer attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" opacity={0.16} noWrap />
       <Terminator now={now} />
-
       <Polyline positions={trajectory} pathOptions={{ color: "#ffffff", weight: 2.5, opacity: 0.95, dashArray: "10 8", lineCap: "round", lineJoin: "round" }} />
       {trajectoryArrows.map((arrow, index) => <Marker key={`trajectory-arrow-${index}`} position={arrow.point} icon={arrowIcons[index]} interactive={false} zIndexOffset={300} />)}
       {trail.length > 1 && <Polyline positions={trail.map((p) => [p.latitude, p.longitude] as LatLng)} pathOptions={{ color: "#ff6bd6", weight: 2, opacity: 0.3, lineCap: "round" }} />}
-
       <Marker position={[position.latitude, position.longitude]} icon={issIcon} zIndexOffset={1000} />
       <CircleMarker center={[position.latitude, position.longitude]} radius={25} pathOptions={{ color: "#ff3030", weight: 1.5, fillOpacity: 0, opacity: 0.72 }} />
       <Recenter position={position} />
