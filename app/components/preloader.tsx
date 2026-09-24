@@ -8,6 +8,7 @@ export default function Preloader() {
       <div className="crack crack3"></div>
       <div className="crack crack4"></div>
       <div className="crack crack5"></div>
+      <span className="preloader-loading">loading</span>
     </div>
   );
 }
