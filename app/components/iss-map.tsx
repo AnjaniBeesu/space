@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { CircleMarker, MapContainer, Polyline, TileLayer, useMap } from "react-leaflet";
-import "leaflet/dist/leaflet.css";
 
 type Position = { latitude: number; longitude: number };
 
