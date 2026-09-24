@@ -1,0 +1,205 @@
+import Link from "next/link";
+
+const sections = [
+  {
+    id: "overview",
+    title: "01 / OVERVIEW",
+    heading: "A laboratory in low Earth orbit.",
+    text: [
+      "The International Space Station (ISS) is a permanently crewed modular space station in low Earth orbit. It is operated through a partnership between NASA, Roscosmos, the European Space Agency, Japan Aerospace Exploration Agency, and the Canadian Space Agency.",
+      "The station is both a research laboratory and a long-duration human-spaceflight platform. Since 2 November 2000, people have lived continuously aboard the ISS, making it one of the defining examples of international cooperation in space.",
+    ],
+  },
+  {
+    id: "conception",
+    title: "02 / CONCEPTION",
+    heading: "From competing ideas to one station.",
+    text: [
+      "The ISS grew from several earlier national space-station concepts. The United States developed Space Station Freedom, while Russia developed the Mir-2 concept. Economic and political changes after the Cold War encouraged the programmes to converge into a multinational project.",
+      "The modern programme was formally established through agreements among its partner agencies. Russia joined the project and brought substantial experience from the Salyut and Mir programmes, while Europe, Japan and Canada contributed modules, laboratories, robotics and other systems.",
+    ],
+  },
+  {
+    id: "purpose",
+    title: "03 / PURPOSE",
+    heading: "Why keep a laboratory in orbit?",
+    text: [
+      "The ISS provides a controlled microgravity environment that cannot be reproduced for long periods on Earth. Researchers use it to study biology, human physiology, physics, materials, combustion, Earth observation and technologies needed for future exploration.",
+      "The station also supports technology demonstrations and education. Experiments can examine how organisms, fluids, materials and physical processes behave when gravity is no longer the dominant force shaping them.",
+    ],
+  },
+  {
+    id: "cooperation",
+    title: "04 / INTERNATIONAL CO-OPERATION",
+    heading: "Five agencies. One orbital laboratory.",
+    text: [
+      "NASA leads the United States orbital segment; Roscosmos operates the Russian segment; ESA supplies and operates European hardware including Columbus; JAXA operates the Japanese Kibō laboratory; and the Canadian Space Agency provides the Mobile Servicing System and Canadarm2 robotics.",
+      "The station's architecture reflects that partnership: different nations manufacture and operate different pieces, but the completed vehicle functions as one integrated spacecraft.",
+    ],
+  },
+  {
+    id: "construction",
+    title: "05 / CONSTRUCTION",
+    heading: "Built piece by piece in orbit.",
+    text: [
+      "Assembly began with the launch of Zarya on 20 November 1998. Unity followed shortly afterward, establishing the first connection between the Russian and American segments. Hundreds of launches, spacewalks and robotic operations gradually transformed those first modules into the station seen today.",
+      "The Space Shuttle played a major role in transporting large components and crews during construction. Russian launch vehicles and spacecraft supplied modules, crew transport and cargo capability, while later commercial spacecraft expanded the station's transportation ecosystem.",
+    ],
+  },
+  {
+    id: "structure",
+    title: "06 / STRUCTURE",
+    heading: "A city-sized spacecraft made of modules.",
+    text: [
+      "The ISS combines pressurised laboratories and living modules with an enormous external truss, solar arrays, radiators, robotic systems and docking ports. Major pressurised elements include Zarya, Unity, Zvezda, Destiny, Quest, Poisk, Harmony, Tranquility, Columbus, Kibō, Cupola, Rassvet, Leonardo, BEAM, the International Docking Adapters, Bishop, Nauka and Prichal.",
+      "The Integrated Truss Structure carries power, thermal-control equipment and the station's solar arrays. Canadarm2 and other robotic systems move equipment and visiting spacecraft and support external maintenance.",
+    ],
+  },
+  {
+    id: "systems",
+    title: "07 / ONBOARD SYSTEMS",
+    heading: "Keeping humans alive in a vacuum.",
+    text: [
+      "Life-support systems manage oxygen, carbon dioxide, humidity, pressure and water. Water is recovered and purified so that supplies launched from Earth can be reduced. Atmospheric systems combine oxygen generation, carbon-dioxide removal and nitrogen management.",
+      "Large solar arrays generate electrical power. Radiators reject waste heat into space, while computers and communications networks coordinate station operations, experiments, navigation and links with mission-control centres on Earth.",
+    ],
+  },
+  {
+    id: "operations",
+    title: "08 / OPERATIONS",
+    heading: "Expeditions, crews and spacecraft.",
+    text: [
+      "Long-duration crews are organised into numbered expeditions. Astronauts and cosmonauts live aboard the station for months at a time, carrying out research, maintenance, exercise, robotics operations and spacewalks.",
+      "The ISS is visited by crewed and uncrewed spacecraft. Soyuz spacecraft have provided crew transportation for decades, while Progress, Dragon, Cygnus and other vehicles have supported cargo operations. Commercial Crew spacecraft now provide regular crew transport from the United States.",
+    ],
+  },
+  {
+    id: "orbit",
+    title: "09 / ORBIT",
+    heading: "Circling Earth roughly every 93 minutes.",
+    text: [
+      "The station travels in low Earth orbit at an inclination of about 51.6 degrees. It moves at roughly 27,600 kilometres per hour and completes about 15.5 orbits around Earth each day, producing repeated sunrises and sunsets for the crew.",
+      "Atmospheric drag slowly lowers the station's orbit. Periodic reboost manoeuvres restore altitude. The orbit also makes the ISS vulnerable to orbital debris, so tracking networks and operators monitor conjunctions and can perform avoidance manoeuvres when necessary.",
+    ],
+  },
+  {
+    id: "environment",
+    title: "10 / ENVIRONMENT & SAFETY",
+    heading: "A hostile environment outside a very controlled habitat.",
+    text: [
+      "Inside the station, temperature, pressure and atmosphere are carefully controlled. Outside, astronauts encounter vacuum, extreme thermal conditions, radiation and the risk posed by high-speed orbital debris.",
+      "Microgravity changes the human body. Long missions can affect bones, muscles, fluids, vision and cardiovascular function, so crews follow intensive exercise and medical protocols. Radiation exposure is another major consideration for long-duration human exploration.",
+    ],
+  },
+  {
+    id: "life",
+    title: "11 / LIFE ABOARD",
+    heading: "Living without up or down.",
+    text: [
+      "Crew quarters are compact and personal. Astronauts sleep in individual sleeping bags attached to walls, work in laboratories, exercise for roughly two hours a day, maintain equipment and communicate with people on Earth.",
+      "Food is packaged for spaceflight and prepared with limited water and equipment. Personal hygiene relies on wipes, rinse-free methods and careful water management rather than conventional showers. Cupola windows provide a spectacular view of Earth and are also useful for Earth observation and photography.",
+    ],
+  },
+  {
+    id: "science",
+    title: "12 / SCIENCE",
+    heading: "What can we learn only by going up?",
+    text: [
+      "Microgravity lets researchers isolate effects that gravity masks on Earth. Experiments investigate protein crystals, cell biology, plant growth, fluid behaviour, combustion, materials, medicine and the effects of long-duration spaceflight on humans.",
+      "The station is also a technology testbed. Systems for water recovery, life support, robotics, communications and spacecraft operations can be tested in the actual environment where future exploration systems will have to work.",
+    ],
+  },
+  {
+    id: "visibility",
+    title: "13 / VISIBILITY FROM EARTH",
+    heading: "You can sometimes see it with your own eyes.",
+    text: [
+      "The ISS can appear as a bright, fast-moving point of light when it passes over a suitable location after sunset or before sunrise. It does not produce its own visible light; sunlight reflected from its large solar arrays makes it conspicuous against a dark sky.",
+      "Visibility depends on the station's orbital position, observer location, season, sunlight geometry and local sky conditions. Tracking services can predict favourable passes and help observers know when to look.",
+    ],
+  },
+  {
+    id: "future",
+    title: "14 / END OF MISSION",
+    heading: "The station will not orbit forever.",
+    text: [
+      "The ISS is a finite spacecraft operating in an environment that continuously degrades it. Partners have extended operations while planning what comes next, including commercial space stations and future human exploration beyond low Earth orbit.",
+      "NASA and its partners have planned a controlled end-of-life disposal strategy. A dedicated U.S. Deorbit Vehicle is intended to guide the station through a controlled atmospheric re-entry after operations conclude, with surviving debris directed toward a remote ocean region.",
+    ],
+  },
+  {
+    id: "culture",
+    title: "15 / IN CULTURE",
+    heading: "More than a machine.",
+    text: [
+      "The ISS has become a symbol of scientific cooperation and human presence beyond Earth. It appears in documentaries, films, literature, games, educational programmes and public outreach, while astronaut photography has made the station and its view of Earth familiar to millions of people.",
+      "Its most enduring legacy may be less about one experiment or module and more about demonstrating that nations with different languages, political systems and engineering traditions can operate one complex spacecraft together for decades.",
+    ],
+  },
+];
+
+export default function MoreAboutISS() {
+  return (
+    <main className="iss-info-page">
+      <header className="topbar info-topbar">
+        <Link href="/" className="brand info-brand">
+          <div className="brand-logo"><img src="/logo.svg" alt="ISS spacecraft" /></div>
+          <span className="brand-title">LIVE ISS TRACKER</span>
+        </Link>
+        <nav className="site-nav" aria-label="Main navigation">
+          <Link href="/">HOME</Link>
+          <span className="nav-current">MORE ABOUT ISS</span>
+        </nav>
+      </header>
+
+      <section className="iss-info-hero">
+        <div className="iss-info-kicker">INTERNATIONAL SPACE STATION / KNOWLEDGE BASE</div>
+        <h1>THE <em>ISS</em>, EXPLAINED.</h1>
+        <p>A structured field guide to the laboratory, spacecraft, science, people and orbital environment behind the live tracker.</p>
+      </section>
+
+      <figure className="iss-feature-image">
+        <img src="https://commons.wikimedia.org/wiki/Special:FilePath/ISS%20March%202009.jpg" alt="The International Space Station photographed from Space Shuttle Discovery" />
+        <figcaption>THE INTERNATIONAL SPACE STATION / PHOTOGRAPHED DURING STS-119 · NASA / PUBLIC DOMAIN</figcaption>
+      </figure>
+
+      <div className="iss-layout">
+        <aside className="iss-index">
+          <div className="index-title">INDEX</div>
+          {sections.map((section) => <a key={section.id} href={`#${section.id}`}>{section.title}</a>)}
+        </aside>
+
+        <article className="iss-content">
+          {sections.map((section, index) => (
+            <section className="iss-section" id={section.id} key={section.id}>
+              <div className="section-number">{section.title}</div>
+              <h2>{section.heading}</h2>
+              {section.text.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
+              {index === 5 && (
+                <figure className="iss-diagram">
+                  <img src="https://commons.wikimedia.org/wiki/Special:FilePath/Iss-blowout-updated-view-2023-300.png" alt="Exploded diagram showing the elements of the International Space Station" />
+                  <figcaption>ISS CONFIGURATION / STATION ELEMENTS · NASA / PUBLIC DOMAIN</figcaption>
+                </figure>
+              )}
+            </section>
+          ))}
+
+          <section className="iss-sources">
+            <div className="section-number">SOURCES / MEDIA</div>
+            <h2>Built from public reference material.</h2>
+            <p>This page is a restructured, original summary of the International Space Station reference material, rather than a reproduction of Wikipedia's text. Images shown here are public-domain NASA works hosted by Wikimedia Commons.</p>
+            <div className="source-links">
+              <a href="https://en.wikipedia.org/wiki/International_Space_Station" target="_blank" rel="noreferrer">WIKIPEDIA / INTERNATIONAL SPACE STATION ↗</a>
+              <a href="https://commons.wikimedia.org/wiki/Category:International_Space_Station" target="_blank" rel="noreferrer">WIKIMEDIA COMMONS / ISS MEDIA ↗</a>
+            </div>
+          </section>
+        </article>
+      </div>
+
+      <footer className="iss-info-footer">
+        <Link href="/">© ISS TRACKER</Link>
+        <span>EMAIL | LINKEDIN</span>
+      </footer>
+    </main>
+  );
+}
