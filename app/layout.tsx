@@ -3,7 +3,7 @@ import "leaflet/dist/leaflet.css";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "SPACE — Live ISS Tracker",
+  title: "🛰️ LIVE ISS TRACKER",
   description: "Track the International Space Station in real time.",
 };
 
