@@ -7,6 +7,8 @@ import L from "leaflet";
 type Position = { latitude: number; longitude: number };
 type LatLng = [number, number];
 
+type OrbitPoint = { latitude: number; longitude: number };
+
 function Recenter({ position }: { position: Position }) {
   const map = useMap();
   useEffect(() => {
@@ -52,83 +54,51 @@ function Terminator({ now }: { now: number }) {
     return [[[90, antiLon], ...left, [-90, antiLon]], [[90, antiLon], ...right, [-90, antiLon]]];
   }, [terminator, sunLon]);
 
-  return (
-    <>
-      {night.map((polygon, index) => <Polygon key={index} positions={polygon} pathOptions={{ color: "#07101f", weight: 0, fillColor: "#07101f", fillOpacity: 0.34 }} />)}
-      <Polyline positions={terminator} pathOptions={{ color: "#f8e7a4", weight: 1.5, opacity: 0.75, dashArray: "5 5" }} />
-    </>
-  );
+  return <>{night.map((polygon, index) => <Polygon key={index} positions={polygon} pathOptions={{ color: "#07101f", weight: 0, fillColor: "#07101f", fillOpacity: 0.34 }} />)}<Polyline positions={terminator} pathOptions={{ color: "#f8e7a4", weight: 1.5, opacity: 0.75, dashArray: "5 5" }} /></>;
 }
 
-function splitAntimeridian(points: LatLng[]) {
-  if (points.length < 2) return [];
+function splitAntimeridian(points: OrbitPoint[]): LatLng[][] {
   const segments: LatLng[][] = [[]];
   for (let i = 0; i < points.length; i++) {
-    const point = points[i];
+    const point: LatLng = [points[i].latitude, points[i].longitude];
     const previous = points[i - 1];
-    if (previous && Math.abs(point[1] - previous[1]) > 180) segments.push([]);
+    if (previous && Math.abs(point[1] - previous.longitude) > 180) segments.push([]);
     segments[segments.length - 1].push(point);
   }
   return segments.filter((segment) => segment.length > 1);
 }
 
-// Approximate ground track from the ISS orbital period (~92.6 min) and current telemetry.
-function buildOrbit(position: Position, altitudeKm: number, velocityKmh: number): LatLng[][] {
-  const earthRadiusKm = 6371;
-  const orbitRadius = earthRadiusKm + Math.max(altitudeKm, 200);
-  const orbitalSpeed = Math.max(velocityKmh, 27000);
-  const periodMinutes = (2 * Math.PI * orbitRadius) / (orbitalSpeed / 60);
-  const inclination = 51.64 * Math.PI / 180;
-  const earthRotationPerMinute = 360 / 1436.07;
-  const points: LatLng[] = [];
-  const steps = 720;
-  const minutes = periodMinutes;
-
-  // The phase is anchored at the current ISS position. Longitude advances with
-  // the orbital motion relative to the rotating Earth; latitude follows the
-  // station's known 51.6° orbital inclination.
-  for (let i = 0; i <= steps; i++) {
-    const t = (i / steps) * minutes;
-    const phase = (t / periodMinutes) * 2 * Math.PI;
-    const lat = Math.asin(Math.sin(inclination) * Math.sin(phase)) * 180 / Math.PI;
-    const longitudinalMotion = (phase * 180 / Math.PI) - earthRotationPerMinute * t;
-    const lon = ((position.longitude + longitudinalMotion + 540) % 360) - 180;
-    points.push([lat, lon]);
-  }
-  return splitAntimeridian(points);
+function createIssIcon(bearing: number) {
+  return L.divIcon({
+    className: "iss-spacecraft-marker",
+    html: `<div class="iss-spacecraft" style="--bearing:${bearing}deg"><span class="iss-direction"></span><span class="iss-body"></span><span class="iss-panel left"></span><span class="iss-panel right"></span><span class="iss-glow"></span><span class="iss-label">ISS</span></div>`,
+    iconSize: [62, 62],
+    iconAnchor: [31, 31],
+  });
 }
 
-const issIcon = L.divIcon({
-  className: "iss-spacecraft-marker",
-  html: `<div class="iss-spacecraft"><span class="iss-body"></span><span class="iss-panel left"></span><span class="iss-panel right"></span><span class="iss-glow"></span></div>`,
-  iconSize: [46, 46],
-  iconAnchor: [23, 23],
-});
-
-export default function IssMap({ position, trail, altitude, velocity }: { position: Position; trail: Position[]; altitude: number; velocity: number }) {
+export default function IssMap({ position, trail, orbit, bearing }: { position: Position; trail: Position[]; orbit: OrbitPoint[]; bearing: number }) {
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 60_000);
     return () => window.clearInterval(timer);
   }, []);
 
-  const orbit = useMemo(() => buildOrbit(position, altitude, velocity), [position, altitude, velocity]);
+  const orbitSegments = useMemo(() => splitAntimeridian(orbit), [orbit]);
+  const issIcon = useMemo(() => createIssIcon(bearing), [bearing]);
 
   return (
-    <MapContainer center={[position.latitude, position.longitude]} zoom={2} minZoom={2} maxZoom={6} scrollWheelZoom className="iss-map">
+    <MapContainer center={[position.latitude, position.longitude]} zoom={2} minZoom={2} maxZoom={7} scrollWheelZoom className="iss-map">
       <TileLayer attribution='&copy; <a href="https://www.esri.com/">Esri</a> contributors' url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}" maxZoom={19} />
-      <TileLayer attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" opacity={0.18} />
+      <TileLayer attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" opacity={0.16} />
       <Terminator now={now} />
 
-      {/* Predicted ground track: one full ISS revolution. */}
-      {orbit.map((segment, index) => (
-        <Polyline key={`orbit-${index}`} positions={segment} pathOptions={{ color: "#f5f7ff", weight: 2, opacity: 0.72, dashArray: "8 9" }} />
-      ))}
+      {/* Real TLE + SGP4 propagated ground track: past → present → future. */}
+      {orbitSegments.map((segment, index) => <Polyline key={`orbit-${index}`} positions={segment} pathOptions={{ color: "#ffffff", weight: 2.2, opacity: 0.86, dashArray: "9 8", lineCap: "round" }} />)}
+      {trail.length > 1 && <Polyline positions={trail.map((p) => [p.latitude, p.longitude] as LatLng)} pathOptions={{ color: "#ff6bd6", weight: 3, opacity: 0.42, lineCap: "round" }} />}
 
-      {/* Short historical track is kept faint so the live trajectory is visually distinct. */}
-      {trail.length > 1 && <Polyline positions={trail.map((p) => [p.latitude, p.longitude] as LatLng)} pathOptions={{ color: "#ff6bd6", weight: 2, opacity: 0.28 }} />}
-      <Marker position={[position.latitude, position.longitude]} icon={issIcon} />
-      <CircleMarker center={[position.latitude, position.longitude]} radius={21} pathOptions={{ color: "#ff6bd6", weight: 1, fillOpacity: 0, opacity: 0.38 }} />
+      <Marker position={[position.latitude, position.longitude]} icon={issIcon} zIndexOffset={1000} />
+      <CircleMarker center={[position.latitude, position.longitude]} radius={24} pathOptions={{ color: "#ff6bd6", weight: 1, fillOpacity: 0, opacity: 0.35 }} />
       <Recenter position={position} />
     </MapContainer>
   );
