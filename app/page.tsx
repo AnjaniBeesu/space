@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState } from "react";
+import Preloader from "./components/preloader";
 
 const IssMap = dynamic(() => import("./components/iss-map"), { ssr: false, loading: () => <div className="map-loading">Loading orbital map…</div> });
 
@@ -17,6 +18,7 @@ export default function Home() {
   const [data, setData] = useState<IssData | null>(null);
   const [trail, setTrail] = useState<Position[]>([]);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let active = true;
@@ -31,6 +33,8 @@ export default function Home() {
         setError("");
       } catch (err) {
         if (active) setError(err instanceof Error ? err.message : "Something went wrong");
+      } finally {
+        if (active) setLoading(false);
       }
     };
     load();
@@ -44,6 +48,8 @@ export default function Home() {
     const ew = data.longitude >= 0 ? "E" : "W";
     return `${Math.abs(data.latitude).toFixed(2)}° ${ns}, ${Math.abs(data.longitude).toFixed(2)}° ${ew}`;
   }, [data]);
+
+  if (loading && !data) return <main className="preloader-screen"><Preloader /></main>;
 
   return (
     <main className="shell">
