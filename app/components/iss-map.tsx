@@ -40,8 +40,6 @@ function Terminator({ now }: { now: number }) {
   return <Polyline positions={points} pathOptions={{ color: "#f8e7a4", weight: 1.5, opacity: 0.75, dashArray: "5 5" }} />;
 }
 
-// Unfold longitude so the orbital path remains one continuous curve instead
-// of being split into artificial pieces when longitude crosses ±180°.
 function unfoldOrbit(points: OrbitPoint[], anchorLongitude: number): LatLng[] {
   if (!points.length) return [];
   const result: LatLng[] = [[points[0].latitude, points[0].longitude]];
@@ -52,9 +50,6 @@ function unfoldOrbit(points: OrbitPoint[], anchorLongitude: number): LatLng[] {
     while (longitude - previous < -180) longitude += 360;
     result.push([points[i].latitude, longitude]);
   }
-
-  // Put the live ISS portion inside the visible world without changing the
-  // shape or continuity of the orbit.
   const closest = result.reduce((best, point, index) => {
     const bestDistance = Math.abs(best.point[1] - anchorLongitude);
     const distance = Math.abs(point[1] - anchorLongitude);
@@ -84,11 +79,8 @@ export default function IssMap({ position, trail, orbit, bearing }: { position: 
       <TileLayer attribution='&copy; <a href="https://www.esri.com/">Esri</a> contributors' url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}" maxZoom={19} noWrap />
       <TileLayer attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" opacity={0.16} noWrap />
       <Terminator now={now} />
-
-      {/* One continuous SGP4 ground track. No artificial split at the date line. */}
-      <Polyline positions={continuousOrbit} pathOptions={{ color: "#ffffff", weight: 3, opacity: 0.92, lineCap: "round", lineJoin: "round", smoothFactor: 1.2 }} />
+      <Polyline positions={continuousOrbit} pathOptions={{ color: "#ffffff", weight: 3, opacity: 0.92, lineCap: "round", lineJoin: "round" }} />
       <Polyline positions={continuousOrbit} pathOptions={{ color: "#dce8ff", weight: 1, opacity: 0.48, lineCap: "round", lineJoin: "round" }} />
-
       {trail.length > 1 && <Polyline positions={trail.map((p) => [p.latitude, p.longitude] as LatLng)} pathOptions={{ color: "#ff6bd6", weight: 3, opacity: 0.42, lineCap: "round", lineJoin: "round" }} />}
       <Marker position={[position.latitude, position.longitude]} icon={issIcon} zIndexOffset={1000} />
       <CircleMarker center={[position.latitude, position.longitude]} radius={24} pathOptions={{ color: "#ff6bd6", weight: 1, fillOpacity: 0, opacity: 0.35 }} />
