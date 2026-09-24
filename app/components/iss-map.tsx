@@ -43,16 +43,25 @@ function Terminator({ now }: { now: number }) {
 function splitAntimeridian(points: OrbitPoint[]): LatLng[][] {
   const segments: LatLng[][] = [[]];
   for (let i = 0; i < points.length; i++) {
-    const point: LatLng = [points[i].latitude, points[i].longitude];
+    const longitude = Math.max(-180, Math.min(180, points[i].longitude));
+    const point: LatLng = [points[i].latitude, longitude];
     const previous = points[i - 1];
-    if (previous && Math.abs(point[1] - previous.longitude) > 180) segments.push([]);
+    if (previous) {
+      const previousLongitude = Math.max(-180, Math.min(180, previous.longitude));
+      if (Math.abs(longitude - previousLongitude) > 170) segments.push([]);
+    }
     segments[segments.length - 1].push(point);
   }
   return segments.filter((segment) => segment.length > 1);
 }
 
 function createIssIcon(bearing: number) {
-  return L.divIcon({ className: "iss-spacecraft-marker", html: `<div class="iss-spacecraft" style="--bearing:${bearing}deg"><span class="iss-direction"></span><span class="iss-body"></span><span class="iss-panel left"></span><span class="iss-panel right"></span><span class="iss-glow"></span><span class="iss-label">ISS</span></div>`, iconSize: [62, 62], iconAnchor: [31, 31] });
+  return L.divIcon({
+    className: "iss-spacecraft-marker",
+    html: `<div class="iss-spacecraft" style="--bearing:${bearing}deg"><span class="iss-ring ring-one"></span><span class="iss-ring ring-two"></span><span class="iss-ring ring-three"></span><span class="iss-direction"></span><span class="iss-body"></span><span class="iss-panel left"></span><span class="iss-panel right"></span><span class="iss-glow"></span><span class="iss-label">ISS</span></div>`,
+    iconSize: [74, 74],
+    iconAnchor: [37, 37],
+  });
 }
 
 export default function IssMap({ position, trail, orbit, bearing }: { position: Position; trail: Position[]; orbit: OrbitPoint[]; bearing: number }) {
@@ -62,12 +71,12 @@ export default function IssMap({ position, trail, orbit, bearing }: { position: 
   const issIcon = useMemo(() => createIssIcon(bearing), [bearing]);
 
   return (
-    <MapContainer center={[position.latitude, position.longitude]} zoom={2} minZoom={2} maxZoom={7} worldCopyJump={false} maxBounds={[[-90, -180], [90, 180]]} maxBoundsViscosity={1} scrollWheelZoom className="iss-map">
+    <MapContainer center={[position.latitude, position.longitude]} zoom={2.5} minZoom={2.5} maxZoom={7} worldCopyJump={false} maxBounds={[[-90, -180], [90, 180]]} maxBoundsViscosity={1} scrollWheelZoom className="iss-map">
       <TileLayer attribution='&copy; <a href="https://www.esri.com/">Esri</a> contributors' url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}" maxZoom={19} noWrap />
       <TileLayer attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" opacity={0.16} noWrap />
       <Terminator now={now} />
-      {orbitSegments.map((segment, index) => <Polyline key={`orbit-${index}`} positions={segment} pathOptions={{ color: "#ffffff", weight: 2.2, opacity: 0.86, dashArray: "9 8", lineCap: "round" }} />)}
-      {trail.length > 1 && <Polyline positions={trail.map((p) => [p.latitude, p.longitude] as LatLng)} pathOptions={{ color: "#ff6bd6", weight: 3, opacity: 0.42, lineCap: "round" }} />}
+      {orbitSegments.map((segment, index) => <Polyline key={`orbit-${index}`} positions={segment} pathOptions={{ color: "#ffffff", weight: 2.2, opacity: 0.86, dashArray: "9 8", lineCap: "round", lineJoin: "round" }} />)}
+      {trail.length > 1 && <Polyline positions={trail.map((p) => [p.latitude, p.longitude] as LatLng)} pathOptions={{ color: "#ff6bd6", weight: 3, opacity: 0.42, lineCap: "round", lineJoin: "round" }} />}
       <Marker position={[position.latitude, position.longitude]} icon={issIcon} zIndexOffset={1000} />
       <CircleMarker center={[position.latitude, position.longitude]} radius={24} pathOptions={{ color: "#ff6bd6", weight: 1, fillOpacity: 0, opacity: 0.35 }} />
       <Recenter position={position} />
