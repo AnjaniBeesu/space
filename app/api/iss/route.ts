@@ -19,8 +19,7 @@ function buildGroundTrack(line1: string, line2: string, start: Date, liveLatitud
   const points: OrbitPoint[] = [];
   const startMs = start.getTime();
 
-  // One clean ISS revolution, centered on the live position.
-  // Keeping this to one orbit prevents the track from doubling back over itself.
+  // Propagate exactly one ISS revolution around the live telemetry timestamp.
   for (let second = -46 * 60; second <= 46 * 60; second += 10) {
     const date = new Date(startMs + second * 1000);
     const propagated = satellite.propagate(satrec, date);
@@ -36,24 +35,32 @@ function buildGroundTrack(line1: string, line2: string, start: Date, liveLatitud
 
   if (!points.length) return points;
 
-  // Align the SGP4 track with the live telemetry so the ISS marker sits
-  // directly on the trajectory without changing the orbital shape.
-  let closest = points[0];
+  // Find the propagated point corresponding to the live ISS position.
+  let closestIndex = 0;
   let closestDistance = Infinity;
-  for (const point of points) {
+  points.forEach((point, index) => {
     const distance = Math.hypot(point.latitude - liveLatitude, longitudeDistance(point.longitude, liveLongitude));
     if (distance < closestDistance) {
       closestDistance = distance;
-      closest = point;
+      closestIndex = index;
     }
-  }
+  });
 
-  const latitudeOffset = liveLatitude - closest.latitude;
-  const longitudeOffset = wrapLongitude(liveLongitude - closest.longitude);
-  return points.map((point) => ({
+  // Translate the propagated ground track so the live ISS position is the
+  // exact anchor. This preserves the SGP4 orbital shape while eliminating
+  // the visible gap between the spacecraft and its trajectory.
+  const anchor = points[closestIndex];
+  const latitudeOffset = liveLatitude - anchor.latitude;
+  const longitudeOffset = wrapLongitude(liveLongitude - anchor.longitude);
+  const aligned = points.map((point) => ({
     latitude: Math.max(-90, Math.min(90, point.latitude + latitudeOffset)),
     longitude: wrapLongitude(point.longitude + longitudeOffset),
   }));
+
+  // Force the anchor itself to the live telemetry coordinate, not an
+  // approximation of it.
+  aligned[closestIndex] = { latitude: liveLatitude, longitude: liveLongitude };
+  return aligned;
 }
 
 function getBearing(points: OrbitPoint[], liveLatitude: number, liveLongitude: number) {
@@ -67,16 +74,19 @@ function getBearing(points: OrbitPoint[], liveLatitude: number, liveLongitude: n
       closestIndex = index;
     }
   });
-  const next = points[Math.min(closestIndex + 1, points.length - 1)];
-  const current = points[closestIndex];
-  return Math.atan2(longitudeDistance(next.longitude, current.longitude) * Math.sign(wrapLongitude(next.longitude - current.longitude)), next.latitude - current.latitude) * 180 / Math.PI;
+  const previous = points[Math.max(0, closestIndex - 1)];
+  const next = points[Math.min(points.length - 1, closestIndex + 1)];
+  return Math.atan2(
+    longitudeDistance(next.longitude, previous.longitude) * Math.sign(wrapLongitude(next.longitude - previous.longitude)),
+    next.latitude - previous.latitude,
+  ) * 180 / Math.PI;
 }
 
 export async function GET() {
   try {
     const [issResponse, tleResponse] = await Promise.all([
       fetch(ISS_URL, { cache: "no-store" }),
-      fetch(TLE_URL, { next: { revalidate: 21_600 } }),
+      fetch(TLE_URL, { cache: "no-store" }),
     ]);
 
     if (!issResponse.ok || !tleResponse.ok) {
