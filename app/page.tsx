@@ -78,7 +78,15 @@ export default function Home() {
         <article><span>LAST SIGNAL</span><strong>{data ? formatTime(data.timestamp) : "—"}</strong><small>Live telemetry</small></article>
       </section>
 
-      <footer><span>SPACE / 2026</span><span>DATA: WHERE THE ISS AT? · ORBIT: CELESTRAK TLE</span></footer>
+      <footer>
+        <span>© ISS TRACKER</span>
+        <span className="footer-contact">
+          FOR MORE INFORMATION, QUERIES OR TO POINT OUT MISTAKES CONTACT: 
+          <a href="mailto:anjanibeesu@gmail.com">GMAIL</a>
+          <a href="https://in.linkedin.com/in/anjanibeesu" target="_blank" rel="noreferrer">LINKEDIN</a>
+          <a href="https://github.com/AnjaniBeesu" target="_blank" rel="noreferrer">GITHUB</a>
+        </span>
+      </footer>
     </main>
   );
 }
