@@ -40,45 +40,45 @@ function Terminator({ now }: { now: number }) {
   return <Polyline positions={points} pathOptions={{ color: "#f8e7a4", weight: 1.5, opacity: 0.75, dashArray: "5 5" }} />;
 }
 
+function longitudeDistance(a: number, b: number) {
+  return Math.abs(((a - b + 540) % 360) - 180);
+}
+
 function buildVisibleTrajectory(points: OrbitPoint[], livePosition: Position): LatLng[] {
   if (!points.length) return [];
-
-  // The API explicitly inserts the live ISS coordinate into the propagated
-  // track. Find that anchor by latitude + wrapped longitude, then unwrap
-  // the entire orbit outward from that exact point so Leaflet never draws a
-  // false jump at the date line.
   let anchorIndex = 0;
   let anchorDistance = Infinity;
-  const longitudeDistance = (a: number, b: number) => Math.abs(((a - b + 540) % 360) - 180);
   points.forEach((point, index) => {
     const distance = Math.hypot(point.latitude - livePosition.latitude, longitudeDistance(point.longitude, livePosition.longitude));
     if (distance < anchorDistance) { anchorDistance = distance; anchorIndex = index; }
   });
 
-  const unwrapped: LatLng[] = new Array(points.length);
-  unwrapped[anchorIndex] = [livePosition.latitude, livePosition.longitude];
+  // Keep every orbital point in the map's single real-world longitude range.
+  // Never create artificial longitudes beyond +/-180: Leaflet would render
+  // those as an apparent second/cut-off trajectory at the map edge.
+  const result = points.map((point) => [point.latitude, point.longitude] as LatLng);
+  result[anchorIndex] = [livePosition.latitude, livePosition.longitude];
+  return result;
+}
 
-  for (let i = anchorIndex + 1; i < points.length; i++) {
-    let longitude = points[i].longitude;
-    const previous = unwrapped[i - 1][1];
-    while (longitude - previous > 180) longitude -= 360;
-    while (longitude - previous < -180) longitude += 360;
-    unwrapped[i] = [points[i].latitude, longitude];
+// The ISS can legitimately cross the +/-180° meridian. On a single-world
+// map, split only at that seam instead of allowing Leaflet to connect the
+// two sides through the entire map. This prevents the left-edge artefact
+// while preserving the exact dynamic SGP4 ground track everywhere else.
+function splitAtDateLine(points: LatLng[]) {
+  if (points.length < 2) return points.length ? [points] : [];
+  const segments: LatLng[][] = [[]];
+  segments[0].push(points[0]);
+  for (let i = 1; i < points.length; i++) {
+    const previous = points[i - 1];
+    const current = points[i];
+    if (Math.abs(current[1] - previous[1]) > 180) {
+      segments.push([current]);
+    } else {
+      segments[segments.length - 1].push(current);
+    }
   }
-
-  for (let i = anchorIndex - 1; i >= 0; i--) {
-    let longitude = points[i].longitude;
-    const next = unwrapped[i + 1][1];
-    while (longitude - next > 180) longitude -= 360;
-    while (longitude - next < -180) longitude += 360;
-    unwrapped[i] = [points[i].latitude, longitude];
-  }
-
-  // Shift the complete orbit by whole worlds only, keeping the live anchor
-  // inside the single [-180, 180] map while preserving continuity.
-  const anchorLongitude = unwrapped[anchorIndex][1];
-  const shift = Math.round((0 - anchorLongitude) / 360) * 360;
-  return unwrapped.map(([latitude, longitude]) => [latitude, longitude + shift] as LatLng);
+  return segments.filter((segment) => segment.length > 1);
 }
 
 function trajectoryBearing(from: LatLng, to: LatLng) {
@@ -99,13 +99,18 @@ export default function IssMap({ position, trail, orbit, bearing }: { position: 
   useEffect(() => { const timer = window.setInterval(() => setNow(Date.now()), 60_000); return () => window.clearInterval(timer); }, []);
 
   const trajectory = useMemo(() => buildVisibleTrajectory(orbit, position), [orbit, position.latitude, position.longitude]);
+  const trajectorySegments = useMemo(() => splitAtDateLine(trajectory), [trajectory]);
   const trajectoryKey = useMemo(() => trajectory.map(([lat, lon]) => `${lat.toFixed(3)}:${lon.toFixed(3)}`).join("|"), [trajectory]);
   const trajectoryArrows = useMemo(() => {
     const arrows: { point: LatLng; bearing: number }[] = [];
-    const spacing = Math.max(1, Math.floor(trajectory.length / 10));
-    for (let i = spacing; i < trajectory.length - 1; i += spacing) arrows.push({ point: trajectory[i], bearing: trajectoryBearing(trajectory[i - 1], trajectory[i + 1]) });
+    trajectorySegments.forEach((segment) => {
+      const spacing = Math.max(1, Math.floor(segment.length / 10));
+      for (let i = spacing; i < segment.length - 1; i += spacing) {
+        arrows.push({ point: segment[i], bearing: trajectoryBearing(segment[i - 1], segment[i + 1]) });
+      }
+    });
     return arrows;
-  }, [trajectory]);
+  }, [trajectorySegments]);
   const issIcon = useMemo(() => createIssIcon(bearing), [bearing]);
   const arrowIcons = useMemo(() => trajectoryArrows.map((arrow) => createTrajectoryArrow(arrow.bearing)), [trajectoryArrows]);
 
@@ -114,7 +119,7 @@ export default function IssMap({ position, trail, orbit, bearing }: { position: 
       <TileLayer attribution='&copy; <a href="https://www.esri.com/">Esri</a> contributors' url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}" maxZoom={19} noWrap />
       <TileLayer attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" opacity={0.16} noWrap />
       <Terminator now={now} />
-      <Polyline key={`live-orbit-${trajectoryKey}`} positions={trajectory} pathOptions={{ color: "#ffffff", weight: 2.5, opacity: 0.95, dashArray: "10 8", lineCap: "round", lineJoin: "round" }} />
+      {trajectorySegments.map((segment, index) => <Polyline key={`live-orbit-${trajectoryKey}-${index}`} positions={segment} pathOptions={{ color: "#ffffff", weight: 2.5, opacity: 0.95, dashArray: "10 8", lineCap: "round", lineJoin: "round" }} />)}
       {trajectoryArrows.map((arrow, index) => <Marker key={`trajectory-arrow-${trajectoryKey}-${index}`} position={arrow.point} icon={arrowIcons[index]} interactive={false} zIndexOffset={300} />)}
       {trail.length > 1 && <Polyline positions={trail.map((p) => [p.latitude, p.longitude] as LatLng)} pathOptions={{ color: "#ff6bd6", weight: 2, opacity: 0.3, lineCap: "round" }} />}
       <Marker position={[position.latitude, position.longitude]} icon={issIcon} zIndexOffset={1000} />
