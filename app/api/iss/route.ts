@@ -19,9 +19,9 @@ function buildGroundTrack(line1: string, line2: string, start: Date, liveLatitud
   const points: OrbitPoint[] = [];
   const startMs = start.getTime();
 
-  // Sample every 15 seconds for a smooth, continuous ground track spanning
-  // a little more than one ISS revolution (~93 minutes).
-  for (let second = -8 * 60; second <= 102 * 60; second += 15) {
+  // One clean ISS revolution, centered on the live position.
+  // Keeping this to one orbit prevents the track from doubling back over itself.
+  for (let second = -46 * 60; second <= 46 * 60; second += 10) {
     const date = new Date(startMs + second * 1000);
     const propagated = satellite.propagate(satrec, date);
     if (!propagated || typeof propagated === "boolean" || !propagated.position || typeof propagated.position === "boolean") continue;
@@ -36,9 +36,8 @@ function buildGroundTrack(line1: string, line2: string, start: Date, liveLatitud
 
   if (!points.length) return points;
 
-  // TLE propagation and the live public telemetry can differ slightly in
-  // phase. Translate the propagated path so its closest point sits exactly
-  // under the live ISS marker, preserving the orbital shape.
+  // Align the SGP4 track with the live telemetry so the ISS marker sits
+  // directly on the trajectory without changing the orbital shape.
   let closest = points[0];
   let closestDistance = Infinity;
   for (const point of points) {
