@@ -40,38 +40,45 @@ function Terminator({ now }: { now: number }) {
   return <Polyline positions={points} pathOptions={{ color: "#f8e7a4", weight: 1.5, opacity: 0.75, dashArray: "5 5" }} />;
 }
 
-function buildVisibleTrajectory(points: OrbitPoint[], anchorLongitude: number): LatLng[] {
+function buildVisibleTrajectory(points: OrbitPoint[], livePosition: Position): LatLng[] {
   if (!points.length) return [];
-  const raw: LatLng[] = [[points[0].latitude, points[0].longitude]];
-  for (let i = 1; i < points.length; i++) {
-    const previous = raw[i - 1][1];
-    let longitude = points[i].longitude;
-    while (longitude - previous > 180) longitude -= 360;
-    while (longitude - previous < -180) longitude += 360;
-    raw.push([points[i].latitude, longitude]);
-  }
 
+  // The API explicitly inserts the live ISS coordinate into the propagated
+  // track. Find that anchor by latitude + wrapped longitude, then unwrap
+  // the entire orbit outward from that exact point so Leaflet never draws a
+  // false jump at the date line.
   let anchorIndex = 0;
   let anchorDistance = Infinity;
-  raw.forEach((point, index) => {
-    const distance = Math.abs(point[1] - anchorLongitude);
+  const longitudeDistance = (a: number, b: number) => Math.abs(((a - b + 540) % 360) - 180);
+  points.forEach((point, index) => {
+    const distance = Math.hypot(point.latitude - livePosition.latitude, longitudeDistance(point.longitude, livePosition.longitude));
     if (distance < anchorDistance) { anchorDistance = distance; anchorIndex = index; }
   });
 
-  const centered = raw.map(([latitude, longitude]) => [latitude, longitude + Math.round((anchorLongitude - raw[anchorIndex][1]) / 360) * 360] as LatLng);
-  const min = Math.min(...centered.map(([, longitude]) => longitude));
-  const max = Math.max(...centered.map(([, longitude]) => longitude));
-  const span = max - min;
+  const unwrapped: LatLng[] = new Array(points.length);
+  unwrapped[anchorIndex] = [livePosition.latitude, livePosition.longitude];
 
-  if (span <= 360) {
-    const lowShift = -180 - min;
-    const highShift = 180 - max;
-    const preferredShift = Math.round(-((min + max) / 2) / 360) * 360;
-    const shift = Math.max(lowShift, Math.min(highShift, preferredShift));
-    return centered.map(([latitude, longitude]) => [latitude, longitude + shift] as LatLng);
+  for (let i = anchorIndex + 1; i < points.length; i++) {
+    let longitude = points[i].longitude;
+    const previous = unwrapped[i - 1][1];
+    while (longitude - previous > 180) longitude -= 360;
+    while (longitude - previous < -180) longitude += 360;
+    unwrapped[i] = [points[i].latitude, longitude];
   }
 
-  return centered.filter(([, longitude]) => longitude >= -180 && longitude <= 180);
+  for (let i = anchorIndex - 1; i >= 0; i--) {
+    let longitude = points[i].longitude;
+    const next = unwrapped[i + 1][1];
+    while (longitude - next > 180) longitude -= 360;
+    while (longitude - next < -180) longitude += 360;
+    unwrapped[i] = [points[i].latitude, longitude];
+  }
+
+  // Shift the complete orbit by whole worlds only, keeping the live anchor
+  // inside the single [-180, 180] map while preserving continuity.
+  const anchorLongitude = unwrapped[anchorIndex][1];
+  const shift = Math.round((0 - anchorLongitude) / 360) * 360;
+  return unwrapped.map(([latitude, longitude]) => [latitude, longitude + shift] as LatLng);
 }
 
 function trajectoryBearing(from: LatLng, to: LatLng) {
@@ -84,27 +91,15 @@ function createTrajectoryArrow(bearing: number) {
 }
 
 function createIssIcon(bearing: number) {
-  return L.divIcon({
-    className: "iss-spacecraft-marker",
-    html: `<div class="iss-spacecraft" style="--bearing:${bearing}deg"><span class="iss-ring ring-one"></span><span class="iss-ring ring-two"></span><span class="iss-ring ring-three"></span><span class="iss-direction"></span><span class="iss-body"></span><span class="iss-panel left"></span><span class="iss-panel right"></span><span class="iss-glow"></span><span class="iss-label">ISS</span></div>`,
-    iconSize: [74, 74], iconAnchor: [37, 37],
-  });
+  return L.divIcon({ className: "iss-spacecraft-marker", html: `<div class="iss-spacecraft" style="--bearing:${bearing}deg"><span class="iss-ring ring-one"></span><span class="iss-ring ring-two"></span><span class="iss-ring ring-three"></span><span class="iss-direction"></span><span class="iss-body"></span><span class="iss-panel left"></span><span class="iss-panel right"></span><span class="iss-glow"></span><span class="iss-label">ISS</span></div>`, iconSize: [74, 74], iconAnchor: [37, 37] });
 }
 
 export default function IssMap({ position, trail, orbit, bearing }: { position: Position; trail: Position[]; orbit: OrbitPoint[]; bearing: number }) {
   const [now, setNow] = useState(Date.now());
   useEffect(() => { const timer = window.setInterval(() => setNow(Date.now()), 60_000); return () => window.clearInterval(timer); }, []);
 
-  // The API regenerates this one-orbit SGP4 window on every live telemetry
-  // update. Keying the rendered path to its changing coordinates makes the
-  // ground track visibly advance with the ISS instead of leaving Leaflet's
-  // existing SVG path mounted in place.
-  const trajectory = useMemo(() => buildVisibleTrajectory(orbit, position.longitude), [orbit, position.longitude]);
-  const trajectoryKey = useMemo(() => {
-    if (!trajectory.length) return "empty";
-    const first = trajectory[0], middle = trajectory[Math.floor(trajectory.length / 2)], last = trajectory[trajectory.length - 1];
-    return `${first[0].toFixed(4)}:${first[1].toFixed(4)}:${middle[0].toFixed(4)}:${middle[1].toFixed(4)}:${last[0].toFixed(4)}:${last[1].toFixed(4)}`;
-  }, [trajectory]);
+  const trajectory = useMemo(() => buildVisibleTrajectory(orbit, position), [orbit, position.latitude, position.longitude]);
+  const trajectoryKey = useMemo(() => trajectory.map(([lat, lon]) => `${lat.toFixed(3)}:${lon.toFixed(3)}`).join("|"), [trajectory]);
   const trajectoryArrows = useMemo(() => {
     const arrows: { point: LatLng; bearing: number }[] = [];
     const spacing = Math.max(1, Math.floor(trajectory.length / 10));
