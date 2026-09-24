@@ -105,12 +105,15 @@ export default function Home() {
       </section>
 
       <footer>
-        <span>© ISS TRACKER</span>
-        <span className="footer-contact">
-          <a href="mailto:anjanibeesu@gmail.com">EMAIL</a>
-          <span>|</span>
-          <a href="https://in.linkedin.com/in/anjanibeesu" target="_blank" rel="noreferrer">LINKEDIN</a>
-        </span>
+        <a className="footer-live-view" href="https://www.youtube.com/watch?v=fO9e9jnhYK8" target="_blank" rel="noreferrer">LIVE VIEW OF ISS ↗</a>
+        <div className="footer-row">
+          <span>© ISS TRACKER</span>
+          <span className="footer-contact">
+            <a href="mailto:anjanibeesu@gmail.com">EMAIL</a>
+            <span>|</span>
+            <a href="https://in.linkedin.com/in/anjanibeesu" target="_blank" rel="noreferrer">LINKEDIN</a>
+          </span>
+        </div>
       </footer>
     </main>
   );
