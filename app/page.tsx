@@ -48,8 +48,14 @@ export default function Home() {
   return (
     <main className="shell">
       <header className="topbar">
-        <div className="brand"><span className="brand-mark">✦</span><span>SPACE</span></div>
-        <div className="status"><span className={`status-dot ${error ? "offline" : ""}`} /> {error ? "DATA OFFLINE" : "LIVE TRACKING"}</div>
+        <div className="brand">
+          <div className="brand-logo" aria-label="Space logo"><img src="/logo.png" alt="" /></div>
+          <span className="brand-title">LIVE ISS TRACKER</span>
+        </div>
+        <nav className="site-nav" aria-label="Main navigation">
+          <button type="button">MORE ABOUT ISS</button>
+          <button type="button">HOME</button>
+        </nav>
       </header>
 
       <section className="hero">
