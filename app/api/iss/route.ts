@@ -6,13 +6,23 @@ const TLE_URL = "https://celestrak.org/NORAD/elements/gp.php?CATNR=25544&FORMAT=
 
 type OrbitPoint = { latitude: number; longitude: number };
 
-function buildGroundTrack(line1: string, line2: string, start: Date): OrbitPoint[] {
+function wrapLongitude(longitude: number) {
+  return ((longitude + 540) % 360) - 180;
+}
+
+function longitudeDistance(a: number, b: number) {
+  return Math.abs(wrapLongitude(a - b));
+}
+
+function buildGroundTrack(line1: string, line2: string, start: Date, liveLatitude: number, liveLongitude: number): OrbitPoint[] {
   const satrec = satellite.twoline2satrec(line1, line2);
   const points: OrbitPoint[] = [];
   const startMs = start.getTime();
 
-  for (let minute = -8; minute <= 102; minute += 1) {
-    const date = new Date(startMs + minute * 60_000);
+  // Sample every 15 seconds for a smooth, continuous ground track spanning
+  // a little more than one ISS revolution (~93 minutes).
+  for (let second = -8 * 60; second <= 102 * 60; second += 15) {
+    const date = new Date(startMs + second * 1000);
     const propagated = satellite.propagate(satrec, date);
     if (!propagated || typeof propagated === "boolean" || !propagated.position || typeof propagated.position === "boolean") continue;
 
@@ -24,7 +34,43 @@ function buildGroundTrack(line1: string, line2: string, start: Date): OrbitPoint
     });
   }
 
-  return points;
+  if (!points.length) return points;
+
+  // TLE propagation and the live public telemetry can differ slightly in
+  // phase. Translate the propagated path so its closest point sits exactly
+  // under the live ISS marker, preserving the orbital shape.
+  let closest = points[0];
+  let closestDistance = Infinity;
+  for (const point of points) {
+    const distance = Math.hypot(point.latitude - liveLatitude, longitudeDistance(point.longitude, liveLongitude));
+    if (distance < closestDistance) {
+      closestDistance = distance;
+      closest = point;
+    }
+  }
+
+  const latitudeOffset = liveLatitude - closest.latitude;
+  const longitudeOffset = wrapLongitude(liveLongitude - closest.longitude);
+  return points.map((point) => ({
+    latitude: Math.max(-90, Math.min(90, point.latitude + latitudeOffset)),
+    longitude: wrapLongitude(point.longitude + longitudeOffset),
+  }));
+}
+
+function getBearing(points: OrbitPoint[], liveLatitude: number, liveLongitude: number) {
+  if (points.length < 2) return 0;
+  let closestIndex = 0;
+  let closestDistance = Infinity;
+  points.forEach((point, index) => {
+    const distance = Math.hypot(point.latitude - liveLatitude, longitudeDistance(point.longitude, liveLongitude));
+    if (distance < closestDistance) {
+      closestDistance = distance;
+      closestIndex = index;
+    }
+  });
+  const next = points[Math.min(closestIndex + 1, points.length - 1)];
+  const current = points[closestIndex];
+  return Math.atan2(longitudeDistance(next.longitude, current.longitude) * Math.sign(wrapLongitude(next.longitude - current.longitude)), next.latitude - current.latitude) * 180 / Math.PI;
 }
 
 export async function GET() {
@@ -52,11 +98,8 @@ export async function GET() {
       return NextResponse.json({ error: "Invalid ISS telemetry or orbital data" }, { status: 502 });
     }
 
-    const orbit = buildGroundTrack(line1, line2, new Date(timestamp * 1000));
-    const next = orbit.find((point) => Math.abs(point.longitude - longitude) < 4 && Math.abs(point.latitude - latitude) < 4);
-    const bearing = next
-      ? Math.atan2(next.longitude - longitude, next.latitude - latitude) * 180 / Math.PI
-      : 0;
+    const orbit = buildGroundTrack(line1, line2, new Date(timestamp * 1000), latitude, longitude);
+    const bearing = getBearing(orbit, latitude, longitude);
 
     return NextResponse.json({
       timestamp,
