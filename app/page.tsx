@@ -62,8 +62,9 @@ export default function Home() {
       </section>
 
       <section className="map-card">
-        {data ? <IssMap position={data} trail={trail} /> : <div className="map-loading">Establishing orbital lock…</div>}
+        {data ? <IssMap position={data} trail={trail} altitude={data.altitude} velocity={data.velocity} /> : <div className="map-loading">Establishing orbital lock…</div>}
         <div className="map-overlay"><span>EARTH</span><span>{data?.visibility ? data.visibility.toUpperCase() : "LOW EARTH ORBIT"}</span></div>
+        <div className="orbit-legend"><span className="legend-line" /> PREDICTED GROUND TRACK</div>
       </section>
 
       <section className="stats">
