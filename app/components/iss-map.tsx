@@ -95,7 +95,16 @@ export default function IssMap({ position, trail, orbit, bearing }: { position: 
   const [now, setNow] = useState(Date.now());
   useEffect(() => { const timer = window.setInterval(() => setNow(Date.now()), 60_000); return () => window.clearInterval(timer); }, []);
 
+  // The API regenerates this one-orbit SGP4 window on every live telemetry
+  // update. Keying the rendered path to its changing coordinates makes the
+  // ground track visibly advance with the ISS instead of leaving Leaflet's
+  // existing SVG path mounted in place.
   const trajectory = useMemo(() => buildVisibleTrajectory(orbit, position.longitude), [orbit, position.longitude]);
+  const trajectoryKey = useMemo(() => {
+    if (!trajectory.length) return "empty";
+    const first = trajectory[0], middle = trajectory[Math.floor(trajectory.length / 2)], last = trajectory[trajectory.length - 1];
+    return `${first[0].toFixed(4)}:${first[1].toFixed(4)}:${middle[0].toFixed(4)}:${middle[1].toFixed(4)}:${last[0].toFixed(4)}:${last[1].toFixed(4)}`;
+  }, [trajectory]);
   const trajectoryArrows = useMemo(() => {
     const arrows: { point: LatLng; bearing: number }[] = [];
     const spacing = Math.max(1, Math.floor(trajectory.length / 10));
@@ -110,8 +119,8 @@ export default function IssMap({ position, trail, orbit, bearing }: { position: 
       <TileLayer attribution='&copy; <a href="https://www.esri.com/">Esri</a> contributors' url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}" maxZoom={19} noWrap />
       <TileLayer attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" opacity={0.16} noWrap />
       <Terminator now={now} />
-      <Polyline positions={trajectory} pathOptions={{ color: "#ffffff", weight: 2.5, opacity: 0.95, dashArray: "10 8", lineCap: "round", lineJoin: "round" }} />
-      {trajectoryArrows.map((arrow, index) => <Marker key={`trajectory-arrow-${index}`} position={arrow.point} icon={arrowIcons[index]} interactive={false} zIndexOffset={300} />)}
+      <Polyline key={`live-orbit-${trajectoryKey}`} positions={trajectory} pathOptions={{ color: "#ffffff", weight: 2.5, opacity: 0.95, dashArray: "10 8", lineCap: "round", lineJoin: "round" }} />
+      {trajectoryArrows.map((arrow, index) => <Marker key={`trajectory-arrow-${trajectoryKey}-${index}`} position={arrow.point} icon={arrowIcons[index]} interactive={false} zIndexOffset={300} />)}
       {trail.length > 1 && <Polyline positions={trail.map((p) => [p.latitude, p.longitude] as LatLng)} pathOptions={{ color: "#ff6bd6", weight: 2, opacity: 0.3, lineCap: "round" }} />}
       <Marker position={[position.latitude, position.longitude]} icon={issIcon} zIndexOffset={1000} />
       <CircleMarker center={[position.latitude, position.longitude]} radius={25} pathOptions={{ color: "#ff3030", weight: 1.5, fillOpacity: 0, opacity: 0.72 }} />
