@@ -40,19 +40,28 @@ function Terminator({ now }: { now: number }) {
   return <Polyline positions={points} pathOptions={{ color: "#f8e7a4", weight: 1.5, opacity: 0.75, dashArray: "5 5" }} />;
 }
 
-function splitAntimeridian(points: OrbitPoint[]): LatLng[][] {
-  const segments: LatLng[][] = [[]];
-  for (let i = 0; i < points.length; i++) {
-    const longitude = Math.max(-180, Math.min(180, points[i].longitude));
-    const point: LatLng = [points[i].latitude, longitude];
-    const previous = points[i - 1];
-    if (previous) {
-      const previousLongitude = Math.max(-180, Math.min(180, previous.longitude));
-      if (Math.abs(longitude - previousLongitude) > 170) segments.push([]);
-    }
-    segments[segments.length - 1].push(point);
+// Unfold longitude so the orbital path remains one continuous curve instead
+// of being split into artificial pieces when longitude crosses ±180°.
+function unfoldOrbit(points: OrbitPoint[], anchorLongitude: number): LatLng[] {
+  if (!points.length) return [];
+  const result: LatLng[] = [[points[0].latitude, points[0].longitude]];
+  for (let i = 1; i < points.length; i++) {
+    const previous = result[i - 1][1];
+    let longitude = points[i].longitude;
+    while (longitude - previous > 180) longitude -= 360;
+    while (longitude - previous < -180) longitude += 360;
+    result.push([points[i].latitude, longitude]);
   }
-  return segments.filter((segment) => segment.length > 1);
+
+  // Put the live ISS portion inside the visible world without changing the
+  // shape or continuity of the orbit.
+  const closest = result.reduce((best, point, index) => {
+    const bestDistance = Math.abs(best.point[1] - anchorLongitude);
+    const distance = Math.abs(point[1] - anchorLongitude);
+    return distance < bestDistance ? { point, index } : best;
+  }, { point: result[0], index: 0 });
+  const offset = Math.round((anchorLongitude - closest.point[1]) / 360) * 360;
+  return result.map(([latitude, longitude]) => [latitude, longitude + offset] as LatLng);
 }
 
 function createIssIcon(bearing: number) {
@@ -67,7 +76,7 @@ function createIssIcon(bearing: number) {
 export default function IssMap({ position, trail, orbit, bearing }: { position: Position; trail: Position[]; orbit: OrbitPoint[]; bearing: number }) {
   const [now, setNow] = useState(Date.now());
   useEffect(() => { const timer = window.setInterval(() => setNow(Date.now()), 60_000); return () => window.clearInterval(timer); }, []);
-  const orbitSegments = useMemo(() => splitAntimeridian(orbit), [orbit]);
+  const continuousOrbit = useMemo(() => unfoldOrbit(orbit, position.longitude), [orbit, position.longitude]);
   const issIcon = useMemo(() => createIssIcon(bearing), [bearing]);
 
   return (
@@ -75,7 +84,11 @@ export default function IssMap({ position, trail, orbit, bearing }: { position: 
       <TileLayer attribution='&copy; <a href="https://www.esri.com/">Esri</a> contributors' url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}" maxZoom={19} noWrap />
       <TileLayer attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" opacity={0.16} noWrap />
       <Terminator now={now} />
-      {orbitSegments.map((segment, index) => <Polyline key={`orbit-${index}`} positions={segment} pathOptions={{ color: "#ffffff", weight: 2.2, opacity: 0.86, dashArray: "9 8", lineCap: "round", lineJoin: "round" }} />)}
+
+      {/* One continuous SGP4 ground track. No artificial split at the date line. */}
+      <Polyline positions={continuousOrbit} pathOptions={{ color: "#ffffff", weight: 3, opacity: 0.92, lineCap: "round", lineJoin: "round", smoothFactor: 1.2 }} />
+      <Polyline positions={continuousOrbit} pathOptions={{ color: "#dce8ff", weight: 1, opacity: 0.48, lineCap: "round", lineJoin: "round" }} />
+
       {trail.length > 1 && <Polyline positions={trail.map((p) => [p.latitude, p.longitude] as LatLng)} pathOptions={{ color: "#ff6bd6", weight: 3, opacity: 0.42, lineCap: "round", lineJoin: "round" }} />}
       <Marker position={[position.latitude, position.longitude]} icon={issIcon} zIndexOffset={1000} />
       <CircleMarker center={[position.latitude, position.longitude]} radius={24} pathOptions={{ color: "#ff6bd6", weight: 1, fillOpacity: 0, opacity: 0.35 }} />
