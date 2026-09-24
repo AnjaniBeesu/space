@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-const ISS_URL = "https://api.open-notify.org/iss-now.json";
+const ISS_URL = "https://api.wheretheiss.at/v1/satellites/25544?units=kilometers";
 
 export async function GET() {
   try {
@@ -10,18 +10,23 @@ export async function GET() {
     }
 
     const data = await response.json();
-    const latitude = Number(data.iss_position?.latitude);
-    const longitude = Number(data.iss_position?.longitude);
+    const latitude = Number(data.latitude);
+    const longitude = Number(data.longitude);
+    const altitude = Number(data.altitude);
+    const velocity = Number(data.velocity);
 
-    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
-      return NextResponse.json({ error: "Invalid ISS coordinates" }, { status: 502 });
+    if (![latitude, longitude, altitude, velocity].every(Number.isFinite)) {
+      return NextResponse.json({ error: "Invalid ISS telemetry" }, { status: 502 });
     }
 
     return NextResponse.json({
       timestamp: Number(data.timestamp),
       latitude,
       longitude,
-      source: "Open Notify",
+      altitude,
+      velocity,
+      visibility: data.visibility,
+      source: "Where The ISS At?",
     });
   } catch {
     return NextResponse.json({ error: "Unable to reach ISS data source" }, { status: 503 });
