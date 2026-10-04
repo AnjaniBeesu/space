@@ -34,7 +34,7 @@ const MAX_DATE = new Date("2050-12-31T23:59:59Z").getTime();
 const DEFAULT_SPEED = 0.35;
 
 function visualDistance(au: number) {
-  return 15 + Math.pow(au, 0.58) * 14;
+  return 15 + Math.pow(Math.max(au, 0.05), 0.58) * 14;
 }
 
 function makeLabel(text: string) {
@@ -59,8 +59,8 @@ function makeLabel(text: string) {
 function makeOrbit(radius: number, color: number) {
   const points: THREE.Vector3[] = [];
   for (let i = 0; i < 256; i += 1) {
-    const a = (i / 256) * Math.PI * 2;
-    points.push(new THREE.Vector3(Math.cos(a) * radius, 0, Math.sin(a) * radius));
+    const angle = (i / 256) * Math.PI * 2;
+    points.push(new THREE.Vector3(Math.cos(angle) * radius, 0, Math.sin(angle) * radius));
   }
   const geometry = new THREE.BufferGeometry().setFromPoints(points);
   const material = new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.42 });
@@ -73,6 +73,9 @@ export default function SolarSystemScene() {
   const objectsRef = useRef(new Map<string, THREE.Mesh>());
   const positionsRef = useRef(new Map<string, THREE.Vector3>());
   const simDateRef = useRef(new Date());
+  const pausedRef = useRef(false);
+  const speedRef = useRef(DEFAULT_SPEED);
+  const selectedRef = useRef("Earth");
   const [simDate, setSimDate] = useState(new Date());
   const [speed, setSpeed] = useState(DEFAULT_SPEED);
   const [paused, setPaused] = useState(false);
@@ -83,9 +86,10 @@ export default function SolarSystemScene() {
   const selectedPlanet = useMemo(() => PLANETS.find((planet) => planet.name === selected) ?? PLANETS[2], [selected]);
   const filteredPlanets = PLANETS.filter((planet) => planet.name.toLowerCase().includes(search.toLowerCase()));
 
-  useEffect(() => {
-    simDateRef.current = simDate;
-  }, [simDate]);
+  useEffect(() => { pausedRef.current = paused; }, [paused]);
+  useEffect(() => { speedRef.current = speed; }, [speed]);
+  useEffect(() => { selectedRef.current = selected; }, [selected]);
+  useEffect(() => { simDateRef.current = simDate; }, [simDate]);
 
   useEffect(() => {
     if (!mountRef.current) return;
@@ -97,7 +101,7 @@ export default function SolarSystemScene() {
     const camera = new THREE.PerspectiveCamera(52, mount.clientWidth / mount.clientHeight, 0.1, 2500);
     camera.position.set(0, 48, 92);
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: "high-performance" });
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.8));
     renderer.setSize(mount.clientWidth, mount.clientHeight);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -111,10 +115,8 @@ export default function SolarSystemScene() {
     controls.target.set(0, 0, 0);
     controlsRef.current = controls;
 
-    const ambient = new THREE.AmbientLight(0x7c879c, 0.24);
-    scene.add(ambient);
-    const sunLight = new THREE.PointLight(0xfff2cf, 4.2, 0, 0.2);
-    scene.add(sunLight);
+    scene.add(new THREE.AmbientLight(0x7c879c, 0.24));
+    scene.add(new THREE.PointLight(0xfff2cf, 4.2, 0, 0.2));
 
     const starGeometry = new THREE.BufferGeometry();
     const starPositions = new Float32Array(4200 * 3);
@@ -127,29 +129,19 @@ export default function SolarSystemScene() {
       starPositions[i * 3 + 2] = radius * Math.sin(phi) * Math.sin(theta);
     }
     starGeometry.setAttribute("position", new THREE.BufferAttribute(starPositions, 3));
-    const starMaterial = new THREE.PointsMaterial({ color: 0xffffff, size: 1.25, transparent: true, opacity: 0.78, sizeAttenuation: true });
-    scene.add(new THREE.Points(starGeometry, starMaterial));
+    scene.add(new THREE.Points(starGeometry, new THREE.PointsMaterial({ color: 0xffffff, size: 1.25, transparent: true, opacity: 0.78 })));
 
-    const sun = new THREE.Mesh(
-      new THREE.SphereGeometry(5.2, 48, 48),
-      new THREE.MeshBasicMaterial({ color: 0xffd27a })
-    );
+    const sun = new THREE.Mesh(new THREE.SphereGeometry(5.2, 48, 48), new THREE.MeshBasicMaterial({ color: 0xffd27a }));
     scene.add(sun);
-    const sunGlow = new THREE.Mesh(
-      new THREE.SphereGeometry(7.2, 32, 32),
-      new THREE.MeshBasicMaterial({ color: 0xffb84d, transparent: true, opacity: 0.075, depthWrite: false })
-    );
-    scene.add(sunGlow);
-
-    const label = makeLabel("SUN");
-    label.position.set(0, 7.2, 0);
-    label.scale.set(8, 2, 1);
-    scene.add(label);
+    scene.add(new THREE.Mesh(new THREE.SphereGeometry(7.2, 32, 32), new THREE.MeshBasicMaterial({ color: 0xffb84d, transparent: true, opacity: 0.075, depthWrite: false })));
+    const sunLabel = makeLabel("SUN");
+    sunLabel.position.set(0, 7.2, 0);
+    sunLabel.scale.set(8, 2, 1);
+    scene.add(sunLabel);
 
     PLANETS.forEach((planet) => {
       const distance = visualDistance(Number(planet.distance.split(" ")[0]));
-      const orbit = makeOrbit(distance, planet.orbitColor);
-      scene.add(orbit);
+      scene.add(makeOrbit(distance, planet.orbitColor));
 
       const mesh = new THREE.Mesh(
         new THREE.SphereGeometry(planet.radius, 32, 32),
@@ -165,18 +157,12 @@ export default function SolarSystemScene() {
       mesh.add(text);
 
       if (planet.name === "Saturn") {
-        const ring = new THREE.Mesh(
-          new THREE.RingGeometry(5.0, 7.0, 96),
-          new THREE.MeshBasicMaterial({ color: 0xc8b58e, side: THREE.DoubleSide, transparent: true, opacity: 0.72 })
-        );
+        const ring = new THREE.Mesh(new THREE.RingGeometry(5.0, 7.0, 96), new THREE.MeshBasicMaterial({ color: 0xc8b58e, side: THREE.DoubleSide, transparent: true, opacity: 0.72 }));
         ring.rotation.x = Math.PI / 2.25;
         mesh.add(ring);
       }
       if (planet.name === "Uranus") {
-        const ring = new THREE.Mesh(
-          new THREE.RingGeometry(3.3, 4.0, 96),
-          new THREE.MeshBasicMaterial({ color: 0x99c5c9, side: THREE.DoubleSide, transparent: true, opacity: 0.35 })
-        );
+        const ring = new THREE.Mesh(new THREE.RingGeometry(3.3, 4.0, 96), new THREE.MeshBasicMaterial({ color: 0x99c5c9, side: THREE.DoubleSide, transparent: true, opacity: 0.35 }));
         ring.rotation.x = Math.PI / 2.1;
         mesh.add(ring);
       }
@@ -201,60 +187,60 @@ export default function SolarSystemScene() {
     };
     window.addEventListener("resize", resize);
 
-    let frame = 0;
+    let rafId = 0;
     let last = performance.now();
     const animate = (now: number) => {
       const delta = Math.min((now - last) / 1000, 0.1);
       last = now;
-      if (!paused) {
-        const next = new Date(simDateRef.current.getTime() + delta * speed * 86400000);
+      if (!pausedRef.current) {
+        const next = new Date(simDateRef.current.getTime() + delta * speedRef.current * 86400000);
         if (next.getTime() > MAX_DATE) next.setTime(MIN_DATE);
         simDateRef.current = next;
-        if (frame % 6 === 0) setSimDate(new Date(next));
+        if (Math.floor(now / 100) % 2 === 0) setSimDate(new Date(next));
       }
 
       PLANETS.forEach((planet) => {
-        const v = Astronomy.HelioVector(planet.body, simDateRef.current);
-        const distance = visualDistance(Math.sqrt(v.x * v.x + v.y * v.y + v.z * v.z));
-        const position = new THREE.Vector3(v.x * distance / Math.max(Math.sqrt(v.x * v.x + v.y * v.y + v.z * v.z), 0.0001), v.z * distance / Math.max(Math.sqrt(v.x * v.x + v.y * v.y + v.z * v.z), 0.0001), -v.y * distance / Math.max(Math.sqrt(v.x * v.x + v.y * v.y + v.z * v.z), 0.0001));
+        const vector = Astronomy.HelioVector(planet.body, simDateRef.current);
+        const length = Math.sqrt(vector.x ** 2 + vector.y ** 2 + vector.z ** 2);
+        const distance = visualDistance(length);
+        const position = new THREE.Vector3((vector.x / length) * distance, (vector.z / length) * distance, (-vector.y / length) * distance);
         const mesh = objectsRef.current.get(planet.name);
         if (mesh) mesh.position.copy(position);
         positionsRef.current.set(planet.name, position.clone());
       });
 
-      const selectedMesh = objectsRef.current.get(selected);
       objectsRef.current.forEach((mesh, name) => {
         const material = mesh.material as THREE.MeshStandardMaterial;
-        const isSelected = name === selected;
+        const isSelected = name === selectedRef.current;
         material.emissive = new THREE.Color(isSelected ? 0x303030 : 0x000000);
         material.emissiveIntensity = isSelected ? 0.7 : 0;
+        mesh.rotation.y += delta * 0.05;
       });
-      if (selectedMesh) selectedMesh.rotation.y += delta * 0.05;
 
       controls.update();
       renderer.render(scene, camera);
-      frame += 1;
-      requestAnimationFrame(animate);
+      rafId = requestAnimationFrame(animate);
     };
-    requestAnimationFrame(animate);
+    rafId = requestAnimationFrame(animate);
     setSceneReady(true);
 
     return () => {
-      cancelAnimationFrame(frame);
+      cancelAnimationFrame(rafId);
       window.removeEventListener("resize", resize);
       renderer.domElement.removeEventListener("pointerdown", onPointerDown);
       controls.dispose();
       renderer.dispose();
-      mount.removeChild(renderer.domElement);
+      if (mount.contains(renderer.domElement)) mount.removeChild(renderer.domElement);
       objectsRef.current.clear();
       positionsRef.current.clear();
+      controlsRef.current = null;
     };
-  }, [paused, selected, speed]);
+  }, []);
 
   const focusSelected = () => {
     const meshPosition = positionsRef.current.get(selected);
-    if (!meshPosition || !controlsRef.current) return;
     const controls = controlsRef.current;
+    if (!meshPosition || !controls) return;
     controls.target.copy(meshPosition);
     controls.object.position.copy(meshPosition.clone().add(new THREE.Vector3(0, 10, 18)));
     controls.update();
@@ -275,13 +261,7 @@ export default function SolarSystemScene() {
 
       <aside className={styles.leftPanel}>
         <div className={styles.panelHeading}>DESTINATIONS <span>{PLANETS.length}</span></div>
-        <input
-          className={styles.search}
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          placeholder="SEARCH WORLD"
-          aria-label="Search planets"
-        />
+        <input className={styles.search} value={search} onChange={(event) => setSearch(event.target.value)} placeholder="SEARCH WORLD" aria-label="Search planets" />
         <div className={styles.planetList}>
           {filteredPlanets.map((planet) => (
             <button key={planet.name} className={`${styles.planetButton} ${selected === planet.name ? styles.active : ""}`} onClick={() => setSelected(planet.name)}>
@@ -305,9 +285,8 @@ export default function SolarSystemScene() {
       </aside>
 
       <div className={styles.sceneTools}>
-        <button onClick={resetView} aria-label="Reset view">HOME</button>
+        <button onClick={resetView}>HOME</button>
         <button onClick={() => setSelected("Earth")}>EARTH</button>
-        <button onClick={() => setSelected("Sun")}>SUN</button>
       </div>
 
       <div className={styles.timeline}>
@@ -323,20 +302,7 @@ export default function SolarSystemScene() {
             <button onClick={() => setPaused((value) => !value)}>{paused ? "PLAY" : "STOP"}</button>
           </div>
         </div>
-        <input
-          className={styles.dateSlider}
-          type="range"
-          min={MIN_DATE}
-          max={MAX_DATE}
-          step={86400000}
-          value={Math.min(MAX_DATE, Math.max(MIN_DATE, simDate.getTime()))}
-          onChange={(event) => {
-            const next = new Date(Number(event.target.value));
-            simDateRef.current = next;
-            setSimDate(next);
-          }}
-          aria-label="Solar system date"
-        />
+        <input className={styles.dateSlider} type="range" min={MIN_DATE} max={MAX_DATE} step={86400000} value={Math.min(MAX_DATE, Math.max(MIN_DATE, simDate.getTime()))} onChange={(event) => { const next = new Date(Number(event.target.value)); simDateRef.current = next; setSimDate(next); }} aria-label="Solar system date" />
         <div className={styles.timelineYears}><span>1950</span><span>1975</span><span>2000</span><span>2025</span><span>2050</span></div>
       </div>
     </div>
