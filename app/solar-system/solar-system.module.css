@@ -103,6 +103,24 @@
 .planetButton span { font: 9px 'DM Mono', monospace; letter-spacing: .1em; }
 .planetButton small { color: #4e4e4e; font: 7px 'DM Mono', monospace; letter-spacing: .07em; }
 
+.layerPanel {
+  position: absolute;
+  left: 20px;
+  bottom: 138px;
+  z-index: 12;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px;
+  background: rgba(3,3,5,.78);
+  border: 1px solid rgba(255,255,255,.1);
+  backdrop-filter: blur(16px);
+}
+.layerPanel > span { color: #555; font: 7px 'DM Mono', monospace; letter-spacing: .12em; padding: 0 4px; }
+.layerPanel button { border: 1px solid #282828; background: #080808; color: #666; padding: 6px 7px; font: 7px 'DM Mono', monospace; letter-spacing: .06em; cursor: pointer; }
+.layerPanel button:hover { color: #fff; border-color: #555; }
+.layerPanel .layerActive { color: #fff; border-color: #888; background: #151515; }
+
 .sceneTools { position: absolute; right: 20px; bottom: 138px; z-index: 12; display: flex; gap: 6px; }
 .sceneTools button { border: 1px solid #333; background: rgba(0,0,0,.7); color: #bbb; padding: 8px 10px; font: 8px 'DM Mono', monospace; letter-spacing: .1em; cursor: pointer; backdrop-filter: blur(10px); }
 .sceneTools button:hover { color: #fff; border-color: #666; }
@@ -132,6 +150,7 @@
   .stage { min-height: 760px; height: calc(100vh - 110px); }
   .leftPanel { left: 12px; top: 54px; width: 180px; }
   .titleBlock { left: 50%; transform: translateX(-50%); bottom: 155px; width: calc(100% - 32px); }
+  .layerPanel { left: 12px; bottom: 132px; max-width: calc(100% - 24px); overflow-x: auto; }
   .sceneTools { right: 12px; bottom: 132px; }
   .helpBlock { display: none; }
   .timeline { left: 12px; right: 12px; }
@@ -145,5 +164,7 @@
   .leftPanel { width: 145px; }
   .titleBlock { bottom: 185px; }
   .titleBlock h1 { font-size: 40px; }
+  .layerPanel { right: 12px; width: calc(100% - 24px); }
+  .sceneTools { display: none; }
   .timelineTop > div:first-child { align-items: flex-start; flex-direction: column; gap: 4px; }
 }
