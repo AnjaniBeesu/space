@@ -1,0 +1,93 @@
+name: Fix solar system rendering
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: "!contains(github.event.head_commit.message, '[skip ci]')"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Repair orbital rendering and realism
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          path = Path('app/solar-system/solar-system-scene.tsx')
+          text = path.read_text()
+
+          # Replace the moving trail with a dense, smooth, continuous sample of the
+          # actual heliocentric position. No dashed-material gaps are used, so the
+          # trail cannot visually break as it crosses the screen.
+          trail = '''function makeOrbitalTrail(planet: PlanetDefinition, date: Date) {
+            const samples = 720;
+            const points: THREE.Vector3[] = [];
+            const windowDays = Math.max(planet.periodDays, 365.25) * 0.999;
+            const start = date.getTime() - (windowDays * DAY_MS) / 2;
+            for (let i = 0; i < samples; i += 1) {
+              const sampleDate = new Date(start + (i / (samples - 1)) * windowDays * DAY_MS);
+              points.push(planetPosition(planet.body, sampleDate));
+            }
+            const geometry = new THREE.BufferGeometry().setFromPoints(points);
+            const material = new THREE.LineBasicMaterial({
+              color: planet.orbitColor,
+              transparent: true,
+              opacity: 0.38,
+              depthWrite: false,
+            });
+            const line = new THREE.Line(geometry, material);
+            line.frustumCulled = false;
+            line.userData.planetTrail = planet.name;
+            return line;
+          }
+
+          function makeSpacecraftModel'''
+          text, count = re.subn(r'function makeOrbitalTrail[\\s\\S]*?function makeSpacecraftModel', trail, text, count=1)
+          if count != 1:
+              raise SystemExit('Could not locate makeOrbitalTrail')
+
+          # Better cinematic rendering: physically toned lighting and a stronger
+          # solar light make the procedural planet surfaces read as spherical bodies.
+          text = text.replace(
+              'renderer.outputColorSpace = THREE.SRGBColorSpace;',
+              'renderer.outputColorSpace = THREE.SRGBColorSpace;\n    renderer.toneMapping = THREE.ACESFilmicToneMapping;\n    renderer.toneMappingExposure = 1.08;'
+          )
+          text = text.replace(
+              'scene.add(new THREE.PointLight(0xffe8bf, 5.5, 0, 0.18));',
+              'scene.add(new THREE.PointLight(0xffe8bf, 7.0, 0, 0.16));\n    const solarLight = new THREE.DirectionalLight(0xfff0cf, 3.2);\n    solarLight.position.set(0, 0, 0);\n    scene.add(solarLight);'
+          )
+          text = text.replace(
+              'const sun = new THREE.Mesh(new THREE.SphereGeometry(5.2, 64, 64), new THREE.MeshBasicMaterial({ color: 0xffc15d }));',
+              'const sun = new THREE.Mesh(new THREE.SphereGeometry(5.2, 96, 96), new THREE.MeshStandardMaterial({ color: 0xffc15d, emissive: 0xff8a22, emissiveIntensity: 2.6, roughness: 0.28 }));'
+          )
+          text = text.replace(
+              'new THREE.MeshStandardMaterial({ map: texture, color: 0xffffff, roughness: planet.name === "Earth" ? 0.68 : 0.86, metalness: 0 })',
+              'new THREE.MeshStandardMaterial({ map: texture, color: 0xffffff, roughness: planet.name === "Earth" ? 0.58 : planet.name === "Venus" ? 0.72 : 0.82, metalness: 0, envMapIntensity: 0.18 })'
+          )
+
+          # Prevent stale trail visibility and keep the trail layer consistent.
+          text = text.replace(
+              'trailGroup.add(trail);\n      trailMap.set(planet.name, trail);',
+              'trailGroup.add(trail);\n      trail.visible = true;\n      trailMap.set(planet.name, trail);'
+          )
+
+          path.write_text(text)
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/solar-system/solar-system-scene.tsx
+          if git diff --cached --quiet; then
+            echo "No changes needed"
+            exit 0
+          fi
+          git commit -m "fix: smooth solar system orbits and improve planet rendering [skip ci]"
+          git push
