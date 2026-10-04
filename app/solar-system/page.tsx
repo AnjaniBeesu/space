@@ -20,21 +20,27 @@ export default function SolarSystemPage() {
 
       <section className={styles.stage} aria-label="Interactive 3D solar system">
         <SolarSystemScene />
-
         <div className={styles.cornerTopLeft}>
           <span className={styles.liveDot} /> LIVE SIMULATION
           <small>HELIOCENTRIC / J2000</small>
         </div>
-
         <div className={styles.titleBlock}>
           <span>01 / THE NEIGHBORHOOD</span>
           <h1>THE SOLAR<br /><em>SYSTEM.</em></h1>
           <p>Explore the planets in three dimensions. Drag to orbit, scroll to zoom, and select a world to inspect it.</p>
         </div>
-
         <div className={styles.helpBlock}>
           <span>DRAG</span> ROTATE &nbsp;&nbsp; <span>SCROLL</span> ZOOM &nbsp;&nbsp; <span>CLICK</span> INSPECT
         </div>
+      </section>
+
+      <section className={styles.spinnerOption} aria-label="Solar Spinner">
+        <div>
+          <span className={styles.spinnerEyebrow}>ANOTHER WAY TO EXPLORE</span>
+          <h2>SOLAR <em>SPINNER.</em></h2>
+          <p>A cinematic planet-by-planet selector inspired by the classic solar spinner interface. Pick a world and let it take center stage.</p>
+        </div>
+        <Link href="/solar-spinner" className={styles.spinnerButton}>OPEN SOLAR SPINNER <span>↗</span></Link>
       </section>
 
       <footer className={styles.footer}>
