@@ -67,6 +67,106 @@ function makeOrbit(radius: number, color: number) {
   return new THREE.LineLoop(geometry, material);
 }
 
+function makePlanetTexture(planet: PlanetDefinition) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 768;
+  canvas.height = 384;
+  const ctx = canvas.getContext("2d")!;
+  const base = `#${planet.color.toString(16).padStart(6, "0")}`;
+  ctx.fillStyle = base;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  const random = (seed: number) => {
+    const value = Math.sin(seed * 12.9898) * 43758.5453;
+    return value - Math.floor(value);
+  };
+
+  if (planet.name === "Earth") {
+    ctx.fillStyle = "#174f86";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    for (let i = 0; i < 22; i += 1) {
+      const x = random(i + 1) * canvas.width;
+      const y = (0.12 + random(i + 2) * 0.76) * canvas.height;
+      const w = (24 + random(i + 3) * 100) * (1 + Math.abs(Math.sin(y)));
+      const h = 16 + random(i + 4) * 62;
+      ctx.fillStyle = i % 5 === 0 ? "#9a8b55" : "#3f713f";
+      ctx.beginPath();
+      ctx.ellipse(x, y, w, h, random(i + 5) * Math.PI, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.fillStyle = "rgba(240,245,240,.52)";
+    for (let i = 0; i < 12; i += 1) {
+      const x = random(i + 20) * canvas.width;
+      const y = random(i + 30) * canvas.height;
+      ctx.beginPath();
+      ctx.ellipse(x, y, 35 + random(i + 40) * 75, 5 + random(i + 50) * 12, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  } else if (planet.name === "Jupiter") {
+    const bands = ["#a8785b", "#d8b08c", "#8f624d", "#e2c5a1", "#a96f55", "#d1a27e"];
+    bands.forEach((color, index) => {
+      ctx.fillStyle = color;
+      ctx.fillRect(0, (index / bands.length) * canvas.height, canvas.width, canvas.height / bands.length + 2);
+    });
+    ctx.fillStyle = "rgba(116,67,49,.78)";
+    ctx.beginPath();
+    ctx.ellipse(520, 255, 75, 34, -0.08, 0, Math.PI * 2);
+    ctx.fill();
+  } else if (planet.name === "Saturn") {
+    const bands = ["#b89d70", "#d9c18c", "#9d835e", "#e2d19f", "#c3a878", "#a88d66"];
+    bands.forEach((color, index) => {
+      ctx.fillStyle = color;
+      ctx.fillRect(0, (index / bands.length) * canvas.height, canvas.width, canvas.height / bands.length + 2);
+    });
+  } else if (planet.name === "Uranus" || planet.name === "Neptune") {
+    for (let i = 0; i < 12; i += 1) {
+      ctx.fillStyle = i % 2 ? "rgba(255,255,255,.07)" : "rgba(0,20,60,.08)";
+      ctx.fillRect(0, (i / 12) * canvas.height, canvas.width, canvas.height / 12 + 3);
+    }
+  } else if (planet.name === "Mars") {
+    ctx.fillStyle = "rgba(80,35,24,.32)";
+    for (let i = 0; i < 26; i += 1) {
+      ctx.beginPath();
+      ctx.ellipse(random(i + 60) * canvas.width, random(i + 80) * canvas.height, 5 + random(i + 90) * 25, 3 + random(i + 100) * 12, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  } else if (planet.name === "Mercury") {
+    ctx.fillStyle = "rgba(35,35,35,.28)";
+    for (let i = 0; i < 34; i += 1) {
+      const r = 2 + random(i + 110) * 11;
+      ctx.beginPath();
+      ctx.arc(random(i + 120) * canvas.width, random(i + 130) * canvas.height, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  } else if (planet.name === "Venus") {
+    for (let i = 0; i < 18; i += 1) {
+      ctx.strokeStyle = `rgba(255,245,205,${0.06 + random(i + 140) * 0.12})`;
+      ctx.lineWidth = 7 + random(i + 150) * 12;
+      ctx.beginPath();
+      ctx.moveTo(0, random(i + 160) * canvas.height);
+      ctx.bezierCurveTo(250, random(i + 170) * canvas.height, 520, random(i + 180) * canvas.height, canvas.width, random(i + 190) * canvas.height);
+      ctx.stroke();
+    }
+  } else {
+    ctx.fillStyle = "rgba(255,255,255,.08)";
+    for (let i = 0; i < 18; i += 1) ctx.fillRect(0, (i / 18) * canvas.height, canvas.width, 1 + random(i + 200) * 3);
+  }
+
+  const image = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  for (let i = 0; i < image.data.length; i += 4) {
+    const grain = (Math.random() - 0.5) * 14;
+    image.data[i] = Math.max(0, Math.min(255, image.data[i] + grain));
+    image.data[i + 1] = Math.max(0, Math.min(255, image.data[i + 1] + grain));
+    image.data[i + 2] = Math.max(0, Math.min(255, image.data[i + 2] + grain));
+  }
+  ctx.putImageData(image, 0, 0);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.anisotropy = 4;
+  return texture;
+}
+
 export default function SolarSystemScene() {
   const mountRef = useRef<HTMLDivElement>(null);
   const controlsRef = useRef<OrbitControls | null>(null);
@@ -83,7 +183,6 @@ export default function SolarSystemScene() {
   const [search, setSearch] = useState("");
   const [sceneReady, setSceneReady] = useState(false);
 
-  const selectedPlanet = useMemo(() => PLANETS.find((planet) => planet.name === selected) ?? PLANETS[2], [selected]);
   const filteredPlanets = PLANETS.filter((planet) => planet.name.toLowerCase().includes(search.toLowerCase()));
 
   useEffect(() => { pausedRef.current = paused; }, [paused]);
@@ -115,8 +214,8 @@ export default function SolarSystemScene() {
     controls.target.set(0, 0, 0);
     controlsRef.current = controls;
 
-    scene.add(new THREE.AmbientLight(0x7c879c, 0.24));
-    scene.add(new THREE.PointLight(0xfff2cf, 4.2, 0, 0.2));
+    scene.add(new THREE.AmbientLight(0x7c879c, 0.2));
+    scene.add(new THREE.PointLight(0xffe8bf, 5.5, 0, 0.18));
 
     const starGeometry = new THREE.BufferGeometry();
     const starPositions = new Float32Array(4200 * 3);
@@ -131,9 +230,9 @@ export default function SolarSystemScene() {
     starGeometry.setAttribute("position", new THREE.BufferAttribute(starPositions, 3));
     scene.add(new THREE.Points(starGeometry, new THREE.PointsMaterial({ color: 0xffffff, size: 1.25, transparent: true, opacity: 0.78 })));
 
-    const sun = new THREE.Mesh(new THREE.SphereGeometry(5.2, 48, 48), new THREE.MeshBasicMaterial({ color: 0xffd27a }));
+    const sun = new THREE.Mesh(new THREE.SphereGeometry(5.2, 64, 64), new THREE.MeshBasicMaterial({ color: 0xffc15d }));
     scene.add(sun);
-    scene.add(new THREE.Mesh(new THREE.SphereGeometry(7.2, 32, 32), new THREE.MeshBasicMaterial({ color: 0xffb84d, transparent: true, opacity: 0.075, depthWrite: false })));
+    scene.add(new THREE.Mesh(new THREE.SphereGeometry(7.6, 48, 48), new THREE.MeshBasicMaterial({ color: 0xffa62b, transparent: true, opacity: 0.075, depthWrite: false })));
     const sunLabel = makeLabel("SUN");
     sunLabel.position.set(0, 7.2, 0);
     sunLabel.scale.set(8, 2, 1);
@@ -143,10 +242,14 @@ export default function SolarSystemScene() {
       const distance = visualDistance(Number(planet.distance.split(" ")[0]));
       scene.add(makeOrbit(distance, planet.orbitColor));
 
-      const mesh = new THREE.Mesh(
-        new THREE.SphereGeometry(planet.radius, 32, 32),
-        new THREE.MeshStandardMaterial({ color: planet.color, roughness: 0.82, metalness: 0.02 })
-      );
+      const texture = makePlanetTexture(planet);
+      const material = new THREE.MeshStandardMaterial({
+        map: texture,
+        color: 0xffffff,
+        roughness: planet.name === "Earth" ? 0.68 : 0.86,
+        metalness: 0,
+      });
+      const mesh = new THREE.Mesh(new THREE.SphereGeometry(planet.radius, 48, 48), material);
       mesh.userData.planet = planet.name;
       scene.add(mesh);
       objectsRef.current.set(planet.name, mesh);
@@ -156,13 +259,28 @@ export default function SolarSystemScene() {
       text.scale.set(8, 2, 1);
       mesh.add(text);
 
+      if (["Earth", "Venus", "Uranus", "Neptune"].includes(planet.name)) {
+        const atmosphereColor = planet.name === "Venus" ? 0xffd8a0 : planet.name === "Earth" ? 0x4d9dff : planet.name === "Neptune" ? 0x4f78ff : 0x7de6f2;
+        const atmosphere = new THREE.Mesh(
+          new THREE.SphereGeometry(planet.radius * 1.035, 40, 40),
+          new THREE.MeshBasicMaterial({ color: atmosphereColor, transparent: true, opacity: planet.name === "Earth" ? 0.1 : 0.055, side: THREE.BackSide, depthWrite: false })
+        );
+        mesh.add(atmosphere);
+      }
+
       if (planet.name === "Saturn") {
-        const ring = new THREE.Mesh(new THREE.RingGeometry(5.0, 7.0, 96), new THREE.MeshBasicMaterial({ color: 0xc8b58e, side: THREE.DoubleSide, transparent: true, opacity: 0.72 }));
+        const ring = new THREE.Mesh(
+          new THREE.RingGeometry(5.0, 7.0, 128),
+          new THREE.MeshStandardMaterial({ color: 0xc8b58e, roughness: 0.9, metalness: 0, side: THREE.DoubleSide, transparent: true, opacity: 0.78 })
+        );
         ring.rotation.x = Math.PI / 2.25;
         mesh.add(ring);
       }
       if (planet.name === "Uranus") {
-        const ring = new THREE.Mesh(new THREE.RingGeometry(3.3, 4.0, 96), new THREE.MeshBasicMaterial({ color: 0x99c5c9, side: THREE.DoubleSide, transparent: true, opacity: 0.35 }));
+        const ring = new THREE.Mesh(
+          new THREE.RingGeometry(3.3, 4.0, 128),
+          new THREE.MeshStandardMaterial({ color: 0x99c5c9, roughness: 0.9, metalness: 0, side: THREE.DoubleSide, transparent: true, opacity: 0.35 })
+        );
         ring.rotation.x = Math.PI / 2.1;
         mesh.add(ring);
       }
@@ -237,15 +355,6 @@ export default function SolarSystemScene() {
     };
   }, []);
 
-  const focusSelected = () => {
-    const meshPosition = positionsRef.current.get(selected);
-    const controls = controlsRef.current;
-    if (!meshPosition || !controls) return;
-    controls.target.copy(meshPosition);
-    controls.object.position.copy(meshPosition.clone().add(new THREE.Vector3(0, 10, 18)));
-    controls.update();
-  };
-
   const resetView = () => {
     const controls = controlsRef.current;
     if (!controls) return;
@@ -271,17 +380,6 @@ export default function SolarSystemScene() {
             </button>
           ))}
         </div>
-      </aside>
-
-      <aside className={styles.infoPanel}>
-        <div className={styles.infoNumber}>PLANET / {String(PLANETS.findIndex((planet) => planet.name === selected) + 1).padStart(2, "0")}</div>
-        <h2>{selectedPlanet.name}</h2>
-        <p>{selectedPlanet.type}</p>
-        <div className={styles.infoGrid}>
-          <span>ORBIT</span><strong>{selectedPlanet.period}</strong>
-          <span>MEAN DISTANCE</span><strong>{selectedPlanet.distance}</strong>
-        </div>
-        <button className={styles.focusButton} onClick={focusSelected}>FOCUS ON {selectedPlanet.name.toUpperCase()} ↗</button>
       </aside>
 
       <div className={styles.sceneTools}>
