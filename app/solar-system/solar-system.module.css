@@ -19,19 +19,8 @@
 }
 
 .brand,
-.nav a {
-  text-decoration: none;
-  color: #fff;
-}
-
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font: 600 11px 'DM Mono', monospace;
-  letter-spacing: .14em;
-}
-
+.nav a { text-decoration: none; color: #fff; }
+.brand { display: flex; align-items: center; gap: 10px; font: 600 11px 'DM Mono', monospace; letter-spacing: .14em; }
 .brandIcon { font-size: 16px; }
 .headerCenter { color: #555; font: 9px 'DM Mono', monospace; letter-spacing: .16em; }
 .nav { justify-self: end; display: flex; gap: 28px; }
@@ -50,13 +39,7 @@
 }
 
 .sceneShell,
-.canvas {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-}
-
+.canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
 .canvas { z-index: 0; cursor: grab; }
 .canvas:active { cursor: grabbing; }
 .sceneLoading { position: absolute; inset: 0; display: grid; place-items: center; z-index: 4; color: #888; background: #020204; font: 10px 'DM Mono', monospace; letter-spacing: .14em; }
@@ -96,16 +79,18 @@
   100% { opacity: 0; visibility: hidden; }
 }
 
-.leftPanel,
-.infoPanel {
+.leftPanel {
   position: absolute;
   z-index: 12;
+  left: 20px;
+  top: 58px;
+  width: 220px;
+  max-height: 480px;
+  padding: 16px;
   background: rgba(3,3,5,.78);
   border: 1px solid rgba(255,255,255,.11);
   backdrop-filter: blur(18px);
 }
-
-.leftPanel { left: 20px; top: 58px; width: 220px; max-height: 480px; padding: 16px; }
 .panelHeading { display: flex; justify-content: space-between; color: #ddd; font: 9px 'DM Mono', monospace; letter-spacing: .13em; margin-bottom: 12px; }
 .panelHeading span { color: #555; }
 .search { width: 100%; height: 30px; border: 1px solid #272727; outline: none; background: #080808; color: #fff; padding: 0 9px; font: 8px 'DM Mono', monospace; letter-spacing: .1em; }
@@ -118,16 +103,6 @@
 .planetButton span { font: 9px 'DM Mono', monospace; letter-spacing: .1em; }
 .planetButton small { color: #4e4e4e; font: 7px 'DM Mono', monospace; letter-spacing: .07em; }
 
-.infoPanel { display: none; }
-.infoNumber { color: #555; font: 8px 'DM Mono', monospace; letter-spacing: .13em; }
-.infoPanel h2 { margin: 13px 0 2px; font-family: 'Century Gothic', 'CenturyGothic', sans-serif; font-size: 32px; font-weight: 400; }
-.infoPanel p { margin: 0 0 20px; color: #666; font: 8px 'DM Mono', monospace; letter-spacing: .12em; }
-.infoGrid { display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid #242424; border-bottom: 1px solid #242424; padding: 12px 0; gap: 8px 12px; }
-.infoGrid span { color: #555; font: 7px 'DM Mono', monospace; letter-spacing: .08em; }
-.infoGrid strong { color: #ddd; font: 8px 'DM Mono', monospace; text-align: right; font-weight: 400; }
-.focusButton { width: 100%; margin-top: 14px; padding: 9px; border: 1px solid #383838; background: #fff; color: #000; font: 8px 'DM Mono', monospace; letter-spacing: .09em; cursor: pointer; }
-.focusButton:hover { background: #ddd; }
-
 .sceneTools { position: absolute; right: 20px; bottom: 138px; z-index: 12; display: flex; gap: 6px; }
 .sceneTools button { border: 1px solid #333; background: rgba(0,0,0,.7); color: #bbb; padding: 8px 10px; font: 8px 'DM Mono', monospace; letter-spacing: .1em; cursor: pointer; backdrop-filter: blur(10px); }
 .sceneTools button:hover { color: #fff; border-color: #666; }
@@ -135,7 +110,6 @@
 .helpBlock { position: absolute; right: 20px; bottom: 143px; z-index: 8; color: #555; font: 7px 'DM Mono', monospace; letter-spacing: .1em; pointer-events: none; }
 .helpBlock span { color: #aaa; }
 
-'timeline' { position: absolute; }
 .timeline { position: absolute; z-index: 15; left: 20px; right: 20px; bottom: 18px; padding: 13px 16px 11px; background: rgba(3,3,5,.88); border: 1px solid rgba(255,255,255,.12); backdrop-filter: blur(18px); }
 .timelineTop { display: flex; justify-content: space-between; align-items: center; gap: 20px; }
 .timelineTop > div:first-child { display: flex; align-items: center; gap: 14px; }
@@ -157,7 +131,6 @@
   .headerCenter { display: none; }
   .stage { min-height: 760px; height: calc(100vh - 110px); }
   .leftPanel { left: 12px; top: 54px; width: 180px; }
-  .infoPanel { display: none; }
   .titleBlock { left: 50%; transform: translateX(-50%); bottom: 155px; width: calc(100% - 32px); }
   .sceneTools { right: 12px; bottom: 132px; }
   .helpBlock { display: none; }
