@@ -8,6 +8,7 @@ export default function Home() {
           <img src="/logo.svg" alt="ISS Tracker" />
         </Link>
         <nav aria-label="Landing page navigation">
+          <Link href="/solar-system">SOLAR SYSTEM</Link>
           <Link href="/more-about-iss">ABOUT ISS</Link>
           <Link href="/tracker">LIVE TRACKER</Link>
           <Link href="/more-about-iss#science">SCIENCE</Link>
@@ -40,7 +41,7 @@ export default function Home() {
           </p>
           <div className="landing-actions">
             <Link href="/tracker" className="landing-primary">TRACK THE ISS <span>↗</span></Link>
-            <Link href="/more-about-iss" className="landing-secondary">EXPLORE THE ISS</Link>
+            <Link href="/solar-system" className="landing-secondary">EXPLORE THE SOLAR SYSTEM</Link>
           </div>
         </div>
 
@@ -53,9 +54,9 @@ export default function Home() {
           <span><strong>THE ISS</strong><small>Live orbital position &amp; telemetry</small></span>
           <span className="feature-arrow">↗</span>
         </Link>
-        <Link href="/more-about-iss" className="landing-feature">
+        <Link href="/solar-system" className="landing-feature">
           <span className="feature-number">02</span>
-          <span><strong>THE STATION</strong><small>Structure, purpose &amp; history</small></span>
+          <span><strong>THE SOLAR SYSTEM</strong><small>Explore planets in interactive 3D</small></span>
           <span className="feature-arrow">↗</span>
         </Link>
         <Link href="/more-about-iss#science" className="landing-feature">
