@@ -23,9 +23,6 @@ jobs:
           path = Path('app/solar-system/solar-system-scene.tsx')
           text = path.read_text()
 
-          # Replace the moving trail with a dense, smooth, continuous sample of the
-          # actual heliocentric position. No dashed-material gaps are used, so the
-          # trail cannot visually break as it crosses the screen.
           trail = '''function makeOrbitalTrail(planet: PlanetDefinition, date: Date) {
             const samples = 720;
             const points: THREE.Vector3[] = [];
@@ -49,12 +46,10 @@ jobs:
           }
 
           function makeSpacecraftModel'''
-          text, count = re.subn(r'function makeOrbitalTrail[\\s\\S]*?function makeSpacecraftModel', trail, text, count=1)
+          text, count = re.subn(r'function makeOrbitalTrail[\s\S]*?function makeSpacecraftModel', trail, text, count=1)
           if count != 1:
               raise SystemExit('Could not locate makeOrbitalTrail')
 
-          # Better cinematic rendering: physically toned lighting and a stronger
-          # solar light make the procedural planet surfaces read as spherical bodies.
           text = text.replace(
               'renderer.outputColorSpace = THREE.SRGBColorSpace;',
               'renderer.outputColorSpace = THREE.SRGBColorSpace;\n    renderer.toneMapping = THREE.ACESFilmicToneMapping;\n    renderer.toneMappingExposure = 1.08;'
@@ -71,13 +66,10 @@ jobs:
               'new THREE.MeshStandardMaterial({ map: texture, color: 0xffffff, roughness: planet.name === "Earth" ? 0.68 : 0.86, metalness: 0 })',
               'new THREE.MeshStandardMaterial({ map: texture, color: 0xffffff, roughness: planet.name === "Earth" ? 0.58 : planet.name === "Venus" ? 0.72 : 0.82, metalness: 0, envMapIntensity: 0.18 })'
           )
-
-          # Prevent stale trail visibility and keep the trail layer consistent.
           text = text.replace(
               'trailGroup.add(trail);\n      trailMap.set(planet.name, trail);',
               'trailGroup.add(trail);\n      trail.visible = true;\n      trailMap.set(planet.name, trail);'
           )
-
           path.write_text(text)
 
       - name: Commit and push
