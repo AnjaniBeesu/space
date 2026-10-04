@@ -177,18 +177,23 @@ function makePlanetTexture(planet: PlanetDefinition) {
 }
 
 function makeOrbitalTrail(planet: PlanetDefinition, date: Date) {
-  const samples = 180;
+  const samples = 720;
   const points: THREE.Vector3[] = [];
-  const windowDays = Math.min(planet.periodDays * 0.52, 3650);
+  const windowDays = Math.max(planet.periodDays, 365.25) * 0.999;
+  const start = date.getTime() - (windowDays * DAY_MS) / 2;
   for (let i = 0; i < samples; i += 1) {
-    const offset = ((i / (samples - 1)) - 0.5) * windowDays;
-    const sampleDate = new Date(date.getTime() + offset * DAY_MS);
+    const sampleDate = new Date(start + (i / (samples - 1)) * windowDays * DAY_MS);
     points.push(planetPosition(planet.body, sampleDate));
   }
   const geometry = new THREE.BufferGeometry().setFromPoints(points);
-  const material = new THREE.LineDashedMaterial({ color: planet.orbitColor, transparent: true, opacity: 0.56, dashSize: 0.8, gapSize: 0.55 });
+  const material = new THREE.LineBasicMaterial({
+    color: planet.orbitColor,
+    transparent: true,
+    opacity: 0.38,
+    depthWrite: false,
+  });
   const line = new THREE.Line(geometry, material);
-  line.computeLineDistances();
+  line.frustumCulled = false;
   line.userData.planetTrail = planet.name;
   return line;
 }
@@ -297,6 +302,8 @@ export default function SolarSystemScene() {
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.8));
     renderer.setSize(mount.clientWidth, mount.clientHeight);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.08;
     mount.appendChild(renderer.domElement);
 
     const controls = new OrbitControls(camera, renderer.domElement);
@@ -308,7 +315,10 @@ export default function SolarSystemScene() {
     controlsRef.current = controls;
 
     scene.add(new THREE.AmbientLight(0x7c879c, 0.2));
-    scene.add(new THREE.PointLight(0xffe8bf, 5.5, 0, 0.18));
+    scene.add(new THREE.PointLight(0xffe8bf, 7.0, 0, 0.16));
+    const solarLight = new THREE.DirectionalLight(0xfff0cf, 3.2);
+    solarLight.position.set(0, 0, 0);
+    scene.add(solarLight);
 
     const starGeometry = new THREE.BufferGeometry();
     const starPositions = new Float32Array(4200 * 3);
@@ -323,7 +333,7 @@ export default function SolarSystemScene() {
     starGeometry.setAttribute("position", new THREE.BufferAttribute(starPositions, 3));
     scene.add(new THREE.Points(starGeometry, new THREE.PointsMaterial({ color: 0xffffff, size: 1.25, transparent: true, opacity: 0.78 })));
 
-    const sun = new THREE.Mesh(new THREE.SphereGeometry(5.2, 64, 64), new THREE.MeshBasicMaterial({ color: 0xffc15d }));
+    const sun = new THREE.Mesh(new THREE.SphereGeometry(5.2, 96, 96), new THREE.MeshStandardMaterial({ color: 0xffc15d, emissive: 0xff8a22, emissiveIntensity: 2.6, roughness: 0.28 }));
     scene.add(sun);
     scene.add(new THREE.Mesh(new THREE.SphereGeometry(7.6, 48, 48), new THREE.MeshBasicMaterial({ color: 0xffa62b, transparent: true, opacity: 0.075, depthWrite: false })));
     const sunLabel = makeLabel("SUN");
@@ -338,6 +348,7 @@ export default function SolarSystemScene() {
       scene.add(makeOrbit(visualDistance(planet.au), planet.orbitColor));
       const trail = makeOrbitalTrail(planet, simDateRef.current);
       trailGroup.add(trail);
+      trail.visible = true;
       trailMap.set(planet.name, trail);
     });
 
@@ -384,7 +395,7 @@ export default function SolarSystemScene() {
 
     PLANETS.forEach((planet) => {
       const texture = makePlanetTexture(planet);
-      const material = new THREE.MeshStandardMaterial({ map: texture, color: 0xffffff, roughness: planet.name === "Earth" ? 0.68 : 0.86, metalness: 0 });
+      const material = new THREE.MeshStandardMaterial({ map: texture, color: 0xffffff, roughness: planet.name === "Earth" ? 0.58 : planet.name === "Venus" ? 0.72 : 0.82, metalness: 0, envMapIntensity: 0.18 });
       const mesh = new THREE.Mesh(new THREE.SphereGeometry(planet.radius, 48, 48), material);
       mesh.userData.planet = planet.name;
       scene.add(mesh);
