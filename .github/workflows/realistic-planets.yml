@@ -1,0 +1,174 @@
+name: Upgrade planet realism
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  realistic-planets:
+    if: "!contains(github.event.head_commit.message, '[skip ci]')"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Upgrade planetary materials and textures
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          path = Path('app/solar-system/solar-system-scene.tsx')
+          text = path.read_text()
+
+          start = text.index('function makePlanetTexture(')
+          end = text.index('\nfunction makeOrbitalTrail', start)
+
+          replacement = r'''function makePlanetTexture(planet: PlanetDefinition) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 1024;
+  canvas.height = 512;
+  const ctx = canvas.getContext("2d")!;
+  const W = canvas.width;
+  const H = canvas.height;
+  const base = `#${planet.color.toString(16).padStart(6, "0")}`;
+  const seeded = (seed: number) => {
+    const x = Math.sin(seed * 127.1 + 311.7) * 43758.5453123;
+    return x - Math.floor(x);
+  };
+  const noise = (x: number, y: number, scale: number) => {
+    const gx = Math.floor(x / scale);
+    const gy = Math.floor(y / scale);
+    const fx = (x % scale) / scale;
+    const fy = (y % scale) / scale;
+    const fade = (v: number) => v * v * (3 - 2 * v);
+    const a = seeded(gx * 19.17 + gy * 7.31);
+    const b = seeded((gx + 1) * 19.17 + gy * 7.31);
+    const c = seeded(gx * 19.17 + (gy + 1) * 7.31);
+    const d = seeded((gx + 1) * 19.17 + (gy + 1) * 7.31);
+    const u = fade(fx), v = fade(fy);
+    return (a * (1 - u) + b * u) * (1 - v) + (c * (1 - u) + d * u) * v;
+  };
+
+  ctx.fillStyle = base;
+  ctx.fillRect(0, 0, W, H);
+
+  if (planet.name === "Earth") {
+    const img = ctx.createImageData(W, H);
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const n = noise(x, y, 52) * 0.58 + noise(x + 31, y + 17, 118) * 0.42;
+      const land = n > 0.57 && Math.abs(y / H - 0.5) < 0.44;
+      const i = (y * W + x) * 4;
+      if (land) {
+        img.data[i] = 48 + n * 50;
+        img.data[i + 1] = 78 + n * 62;
+        img.data[i + 2] = 38 + n * 32;
+      } else {
+        img.data[i] = 8 + n * 16;
+        img.data[i + 1] = 46 + n * 44;
+        img.data[i + 2] = 92 + n * 78;
+      }
+      img.data[i + 3] = 255;
+    }
+    ctx.putImageData(img, 0, 0);
+    ctx.fillStyle = "rgba(255,255,255,.15)";
+    for (let i = 0; i < 70; i++) {
+      const x = seeded(i + 3) * W, y = seeded(i + 103) * H;
+      ctx.beginPath();
+      ctx.ellipse(x, y, 18 + seeded(i + 203) * 70, 2 + seeded(i + 303) * 9, seeded(i + 403) * Math.PI, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  } else if (planet.name === "Mercury" || planet.name === "Mars" || planet.name === "Pluto") {
+    const img = ctx.getImageData(0, 0, W, H);
+    const tint = planet.name === "Mars" ? [122, 55, 35] : planet.name === "Pluto" ? [142, 121, 103] : [128, 125, 116];
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const n = noise(x, y, 24) * .55 + noise(x + 90, y - 20, 73) * .45;
+      const i = (y * W + x) * 4;
+      const shade = 0.62 + n * 0.72;
+      img.data[i] = Math.min(255, tint[0] * shade);
+      img.data[i + 1] = Math.min(255, tint[1] * shade);
+      img.data[i + 2] = Math.min(255, tint[2] * shade);
+    }
+    ctx.putImageData(img, 0, 0);
+    const craters = planet.name === "Pluto" ? 28 : planet.name === "Mars" ? 85 : 120;
+    for (let i = 0; i < craters; i++) {
+      const x = seeded(i + 700) * W, y = seeded(i + 900) * H;
+      const r = 2 + seeded(i + 1100) * (planet.name === "Mercury" ? 20 : 12);
+      const g = ctx.createRadialGradient(x, y, r * .08, x, y, r);
+      g.addColorStop(0, "rgba(25,20,18,.34)");
+      g.addColorStop(.55, "rgba(45,35,30,.16)");
+      g.addColorStop(1, "rgba(255,255,255,0)");
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+    }
+  } else if (planet.name === "Jupiter" || planet.name === "Saturn") {
+    const bands = planet.name === "Jupiter"
+      ? ["#7b5140","#c29a79","#e0c3a3","#8f6451","#d5b18d","#745044","#c9a17e","#e7c9a7"]
+      : ["#9b8058","#d8c18d","#b49a6d","#ead9aa","#a98f64","#d0b67d"];
+    for (let i = 0; i < bands.length; i++) {
+      const y = i / bands.length * H;
+      ctx.fillStyle = bands[i]; ctx.fillRect(0, y, W, H / bands.length + 2);
+      ctx.fillStyle = `rgba(50,35,25,${.035 + seeded(i + 1300) * .06})`;
+      for (let j = 0; j < 8; j++) {
+        ctx.fillRect(0, y + seeded(i * 20 + j) * H / bands.length, W, 1 + seeded(i * 30 + j) * 5);
+      }
+    }
+    if (planet.name === "Jupiter") {
+      ctx.fillStyle = "rgba(145,70,47,.75)";
+      ctx.beginPath(); ctx.ellipse(W * .69, H * .66, 78, 34, -.08, 0, Math.PI * 2); ctx.fill();
+    }
+  } else if (planet.name === "Venus") {
+    ctx.fillStyle = "#c99555"; ctx.fillRect(0, 0, W, H);
+    for (let i = 0; i < 150; i++) {
+      ctx.strokeStyle = `rgba(255,235,185,${.025 + seeded(i) * .09})`;
+      ctx.lineWidth = 2 + seeded(i + 2000) * 13;
+      const y = seeded(i + 2100) * H;
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.bezierCurveTo(W*.3, y-40, W*.7, y+50, W, y + (seeded(i+2200)-.5)*70); ctx.stroke();
+    }
+  } else {
+    const img = ctx.getImageData(0, 0, W, H);
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const n = noise(x, y, 45);
+      const i = (y * W + x) * 4;
+      const shimmer = (n - .5) * 18;
+      img.data[i] = Math.max(0, Math.min(255, img.data[i] + shimmer));
+      img.data[i + 1] = Math.max(0, Math.min(255, img.data[i + 1] + shimmer));
+      img.data[i + 2] = Math.max(0, Math.min(255, img.data[i + 2] + shimmer));
+    }
+    ctx.putImageData(img, 0, 0);
+  }
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.anisotropy = 8;
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.ClampToEdgeWrapping;
+  return texture;
+}
+'''
+          text = text[:start] + replacement + text[end:]
+
+          # Give every planet a physically richer material. Earth gets stronger relief,
+          # while gas/ice giants stay softer and less reflective.
+          old = 'new THREE.MeshStandardMaterial({ map: texture, color: 0xffffff, roughness: planet.name === "Earth" ? 0.58 : planet.name === "Venus" ? 0.72 : 0.82, metalness: 0, envMapIntensity: 0.18 })'
+          new = 'new THREE.MeshStandardMaterial({ map: texture, color: 0xffffff, roughness: planet.name === "Earth" ? 0.72 : planet.name === "Venus" ? 0.78 : planet.type === "GAS GIANT" ? 0.92 : 0.86, metalness: 0, envMapIntensity: 0.05, bumpMap: texture, bumpScale: planet.type === "GAS GIANT" ? 0.035 : 0.075 })'
+          if old in text:
+              text = text.replace(old, new, 1)
+          else:
+              text = re.sub(r'new THREE\.MeshStandardMaterial\(\{ map: texture,[\s\S]*?\}\)', new, text, count=1)
+
+          path.write_text(text)
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/solar-system/solar-system-scene.tsx
+          if git diff --cached --quiet; then
+            echo "No planetary changes needed"
+            exit 0
+          fi
+          git commit -m "feat: improve planetary realism [skip ci]"
+          git push
