@@ -84,11 +84,17 @@
   z-index: 8;
   max-width: 410px;
   pointer-events: none;
+  animation: introTitle 10.5s linear forwards;
 }
 .titleBlock > span { color: #666; font: 9px 'DM Mono', monospace; letter-spacing: .14em; }
 .titleBlock h1 { margin: 12px 0 14px; font-family: 'Century Gothic', 'CenturyGothic', sans-serif; font-size: clamp(38px, 5vw, 70px); font-weight: 400; line-height: .9; letter-spacing: .02em; }
 .titleBlock h1 em { font-style: normal; color: #8b8b8b; }
 .titleBlock p { max-width: 370px; color: #777; font: 12px/1.65 'DM Mono', monospace; }
+
+@keyframes introTitle {
+  0%, 95% { opacity: 1; }
+  100% { opacity: 0; visibility: hidden; }
+}
 
 .leftPanel,
 .infoPanel {
@@ -112,7 +118,7 @@
 .planetButton span { font: 9px 'DM Mono', monospace; letter-spacing: .1em; }
 .planetButton small { color: #4e4e4e; font: 7px 'DM Mono', monospace; letter-spacing: .07em; }
 
-.infoPanel { right: 20px; top: 58px; width: 240px; padding: 19px; }
+.infoPanel { display: none; }
 .infoNumber { color: #555; font: 8px 'DM Mono', monospace; letter-spacing: .13em; }
 .infoPanel h2 { margin: 13px 0 2px; font-family: 'Century Gothic', 'CenturyGothic', sans-serif; font-size: 32px; font-weight: 400; }
 .infoPanel p { margin: 0 0 20px; color: #666; font: 8px 'DM Mono', monospace; letter-spacing: .12em; }
@@ -129,6 +135,7 @@
 .helpBlock { position: absolute; right: 20px; bottom: 143px; z-index: 8; color: #555; font: 7px 'DM Mono', monospace; letter-spacing: .1em; pointer-events: none; }
 .helpBlock span { color: #aaa; }
 
+'timeline' { position: absolute; }
 .timeline { position: absolute; z-index: 15; left: 20px; right: 20px; bottom: 18px; padding: 13px 16px 11px; background: rgba(3,3,5,.88); border: 1px solid rgba(255,255,255,.12); backdrop-filter: blur(18px); }
 .timelineTop { display: flex; justify-content: space-between; align-items: center; gap: 20px; }
 .timelineTop > div:first-child { display: flex; align-items: center; gap: 14px; }
@@ -150,7 +157,7 @@
   .headerCenter { display: none; }
   .stage { min-height: 760px; height: calc(100vh - 110px); }
   .leftPanel { left: 12px; top: 54px; width: 180px; }
-  .infoPanel { right: 12px; top: 54px; width: 190px; }
+  .infoPanel { display: none; }
   .titleBlock { left: 50%; transform: translateX(-50%); bottom: 155px; width: calc(100% - 32px); }
   .sceneTools { right: 12px; bottom: 132px; }
   .helpBlock { display: none; }
@@ -163,10 +170,6 @@
   .nav { gap: 12px; }
   .nav a:last-child { display: none; }
   .leftPanel { width: 145px; }
-  .infoPanel { width: 150px; }
-  .infoPanel h2 { font-size: 23px; }
-  .infoGrid { grid-template-columns: 1fr; }
-  .infoGrid strong { text-align: left; }
   .titleBlock { bottom: 185px; }
   .titleBlock h1 { font-size: 40px; }
   .timelineTop > div:first-child { align-items: flex-start; flex-direction: column; gap: 4px; }
